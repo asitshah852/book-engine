@@ -1,0 +1,301 @@
+{
+  "accounts": [
+    {
+      "id": "f6cc9724-6fe4-4c01-90e7-295551f986af",
+      "name": "Asit",
+      "createdAt": 1783470158963
+    }
+  ],
+  "shelves": {
+    "f6cc9724-6fe4-4c01-90e7-295551f986af": {
+      "books": [
+        {
+          "id": "1783487307305-6",
+          "title": "BLACK EDGE Black Edge",
+          "author": "Silako Haka",
+          "year": 2018,
+          "photo": null
+        },
+        {
+          "id": "1783487295963-5",
+          "title": "Billion dollar whale",
+          "author": "Wright, Tom (Wall Street Journal reporter)",
+          "year": 2018,
+          "photo": null
+        },
+        {
+          "id": "1783487097890-4",
+          "title": "Gods of New York : Egotists, Idealists, Opportunists, and the Transformation of a City",
+          "author": "Jonathan Mahler",
+          "year": 2025,
+          "photo": null
+        },
+        {
+          "id": "1783486895533-2",
+          "title": "The Great Gatsby",
+          "author": "F. Scott Fitzgerald",
+          "year": 1920,
+          "photo": "https://is1-ssl.mzstatic.com/image/thumb/Publication123/v4/25/47/a8/2547a86f-5726-4509-91a8-e54b89a2c890/PD_The_Great_Gatsby-Adj.jpg/400x400bb.jpg"
+        },
+        {
+          "id": "1783486853102-1",
+          "title": "Bad Blood",
+          "author": "John Carreyrou",
+          "year": 2018,
+          "photo": "https://is1-ssl.mzstatic.com/image/thumb/Publication116/v4/02/20/8a/02208a4b-e40e-d459-8778-d7f58485123c/9781524731663.d.jpg/400x400bb.jpg"
+        },
+        {
+          "id": "1783482352494-4",
+          "title": "The Sellout",
+          "author": "Paul Beatty",
+          "year": 2015,
+          "photo": "https://is1-ssl.mzstatic.com/image/thumb/Publication125/v4/2f/59/32/2f5932f8-fe3a-d496-d48e-d00455995159/9780374712242.jpg/400x400bb.jpg"
+        },
+        {
+          "id": "1783482093825-3",
+          "title": "Bossypants",
+          "author": "Tina Fey",
+          "year": 2011,
+          "photo": "https://is1-ssl.mzstatic.com/image/thumb/Publication114/v4/b4/5c/14/b45c14dc-0070-e109-62c6-986645ea9399/9780316175869.jpg/400x400bb.jpg"
+        },
+        {
+          "id": "1783482086669-2",
+          "title": "Catch-22",
+          "author": "Joseph Heller",
+          "year": 1961,
+          "photo": "https://is1-ssl.mzstatic.com/image/thumb/Publication211/v4/cc/b6/9a/ccb69a7c-ca63-66d5-2fbb-a18d009b6c53/179d373a-d07b-4437-bb24-4556a8015455_cover_image.png/400x400bb.jpg"
+        },
+        {
+          "id": "1783482083651-1",
+          "title": "A Confederacy of Dunces",
+          "author": "John Kennedy Toole",
+          "year": 1980,
+          "photo": "https://is1-ssl.mzstatic.com/image/thumb/Publication124/v4/9b/1e/9e/9b1e9ec3-96ad-5f73-7a08-3cbb772d3339/A_Confederacy_of_Dunces.jpg/400x400bb.jpg"
+        },
+        {
+          "id": "1783478892878-1",
+          "title": "Moneyball",
+          "author": "Michael Lewis",
+          "year": 2003,
+          "photo": "https://is1-ssl.mzstatic.com/image/thumb/Publication/97/ad/3f/mzi.evjrtvmk.jpg/400x400bb.jpg"
+        },
+        {
+          "id": "1783477751839-3",
+          "title": "The Hunter",
+          "author": "Richard Stark",
+          "year": null,
+          "photo": "https://is1-ssl.mzstatic.com/image/thumb/Publication60/v4/d8/04/9a/d8049a19-95d7-4f92-ce9d-07c0389c5be6/9780226772844-frontcover.jpg/400x400bb.jpg"
+        },
+        {
+          "id": "1783476351972-25",
+          "title": "Die Trying",
+          "author": "Lee Child",
+          "year": 1998,
+          "photo": "https://is1-ssl.mzstatic.com/image/thumb/Publication122/v4/ed/1e/d9/ed1ed9b3-3f10-0663-21b2-d3b938b167dc/9781440625725.d.jpg/400x400bb.jpg"
+        },
+        {
+          "id": "1783476349014-24",
+          "title": "The Sympathizer",
+          "author": "Viet Thanh Nguyen",
+          "year": 2015,
+          "photo": "https://is1-ssl.mzstatic.com/image/thumb/Publication221/v4/74/a0/e3/74a0e316-414a-7c39-2d52-59314e187973/9780802191694.jpg/400x400bb.jpg"
+        },
+        {
+          "id": "1783476345510-23",
+          "title": "The big short",
+          "author": "Michael Lewis",
+          "year": 2009,
+          "photo": "https://is1-ssl.mzstatic.com/image/thumb/Publication/1f/98/c0/mzi.eifducbx.jpg/400x400bb.jpg"
+        },
+        {
+          "id": "1783475967501-22",
+          "title": "India after Gandhi",
+          "author": "Ramachandra Guha",
+          "year": 2007,
+          "photo": "https://is1-ssl.mzstatic.com/image/thumb/Publication221/v4/93/2f/c0/932fc0dc-07e8-b2f6-3fc3-23b0eab39bce/1057967778.jpg/400x400bb.jpg"
+        },
+        {
+          "id": "1783475944019-21",
+          "title": "Tomorrow, and Tomorrow, and Tomorrow",
+          "author": "Gabrielle Zevin",
+          "year": 2022,
+          "photo": "https://is1-ssl.mzstatic.com/image/thumb/Publication221/v4/0a/52/d9/0a52d9fc-a8cc-af1d-fe3a-5d27e9858212/9780593321218.d.jpg/400x400bb.jpg"
+        },
+        {
+          "id": "1783475893297-20",
+          "title": "Patriot games",
+          "author": "Tom Clancy",
+          "year": 1975,
+          "photo": "https://is1-ssl.mzstatic.com/image/thumb/Publication126/v4/1f/33/bd/1f33bd81-0a0a-1e4e-ed9d-3a59bc83edf6/9781101002391.d.jpg/400x400bb.jpg"
+        },
+        {
+          "id": "1783475870237-19",
+          "title": "The God of Small Things",
+          "author": "Arundhati Roy",
+          "year": 1997,
+          "photo": "https://is1-ssl.mzstatic.com/image/thumb/Publication125/v4/2a/6e/eb/2a6eeb84-3add-e937-e4db-62e435ad8fec/9781588367839.jpg/400x400bb.jpg"
+        },
+        {
+          "id": "1783475858563-18",
+          "title": "Invisible Women",
+          "author": "Caroline Criado Perez",
+          "year": 2019,
+          "photo": "https://is1-ssl.mzstatic.com/image/thumb/Publication211/v4/fa/55/3e/fa553e42-2439-8c3e-1383-e835a9614938/9781683353140.jpg/400x400bb.jpg"
+        },
+        {
+          "id": "1783475828399-16",
+          "title": "Inner Game of Tennis",
+          "author": "W. Timothy Gallwey",
+          "year": 2010,
+          "photo": "https://is1-ssl.mzstatic.com/image/thumb/Publication221/v4/87/cb/65/87cb6564-106d-f645-d2f5-f9dfb4953dde/9780307758859.d.jpg/400x400bb.jpg"
+        },
+        {
+          "id": "1783475810903-15",
+          "title": "Winning ugly",
+          "author": "Brad Gilbert",
+          "year": 2003,
+          "photo": "https://is1-ssl.mzstatic.com/image/thumb/Publication2/v4/77/aa/2e/77aa2ed3-9cfb-7743-b68c-51d392e51833/9781476715094.jpg/400x400bb.jpg"
+        },
+        {
+          "id": "1783475791495-14",
+          "title": "In the Distance / Trust",
+          "author": "Hernan Diaz",
+          "year": 2024,
+          "photo": null
+        },
+        {
+          "id": "1783475731690-13",
+          "title": "Drayton and Mackenzie",
+          "author": "Alexander Starritt",
+          "year": 2025,
+          "photo": "https://is1-ssl.mzstatic.com/image/thumb/Publication211/v4/43/9a/fd/439afdb7-9da2-f9e7-5bdb-8ab4f8a19be1/9780802168658.jpg/400x400bb.jpg"
+        },
+        {
+          "id": "1783475708737-12",
+          "title": "You can be a stock market genius",
+          "author": "Joel Greenblatt",
+          "year": 1997,
+          "photo": "https://is1-ssl.mzstatic.com/image/thumb/Publication5/v4/c5/c5/5a/c5c55a5e-9daf-9078-cc12-269c99d91e06/9781451628067.jpg/400x400bb.jpg"
+        },
+        {
+          "id": "1783475692547-11",
+          "title": "Moscow X",
+          "author": "David McCloskey",
+          "year": 2023,
+          "photo": "https://is1-ssl.mzstatic.com/image/thumb/Publication211/v4/5a/5c/50/5a5c50f1-15b9-ac84-aacf-65c32b52ffd1/9781324050766.jpg/400x400bb.jpg"
+        },
+        {
+          "id": "1783475683758-10",
+          "title": "Damascus Station",
+          "author": "David Mccloskey",
+          "year": 2021,
+          "photo": "https://is1-ssl.mzstatic.com/image/thumb/Publication125/v4/48/cf/82/48cf82b9-26b7-1d08-9424-7f39d0c6660a/9780393881059.jpg/400x400bb.jpg"
+        },
+        {
+          "id": "1783475575109-4",
+          "title": "How Music Got Free",
+          "author": "Stephen Witt",
+          "year": 2015,
+          "photo": "https://is1-ssl.mzstatic.com/image/thumb/Publication211/v4/ee/23/5b/ee235b36-df8f-1aa2-8702-a5851d4b37cd/9780698152526.d.jpg/400x400bb.jpg"
+        },
+        {
+          "id": "1783475508855-3",
+          "title": "Open",
+          "author": "Andre Agassi",
+          "year": 2009,
+          "photo": "https://is1-ssl.mzstatic.com/image/thumb/Publication4/v4/cc/33/c0/cc33c088-ed43-ad76-8d9a-8ab890cdb4af/9780307592804.jpg/400x400bb.jpg"
+        },
+        {
+          "id": "1783475497787-2",
+          "title": "One Up On Wall Street",
+          "author": "Peter Lynch",
+          "year": 1989,
+          "photo": "https://is1-ssl.mzstatic.com/image/thumb/Publication221/v4/74/1c/1e/741c1e5f-5287-d00f-716c-3a8d4ca6e1e6/9781439126158.jpg/400x400bb.jpg"
+        },
+        {
+          "id": "1783475484806-1",
+          "title": "Killing Floor",
+          "author": "Lee Child",
+          "year": 1997,
+          "photo": "https://is1-ssl.mzstatic.com/image/thumb/Publication122/v4/dc/a8/41/dca84109-9b7a-5775-6aff-acc1eaafae7a/9781101147054.d.jpg/400x400bb.jpg"
+        },
+        {
+          "id": "1783474084558-3",
+          "title": "Elon Musk",
+          "author": "Walter Isaacson",
+          "year": 2023,
+          "photo": "https://is1-ssl.mzstatic.com/image/thumb/Publication126/v4/d4/c7/84/d4c78414-6599-e723-71de-837a0197dbd9/9781982181307.jpg/400x400bb.jpg"
+        },
+        {
+          "id": "1783474015533-1",
+          "title": "Liar's Poker",
+          "author": "Michael Lewis",
+          "year": 1989,
+          "photo": "https://is1-ssl.mzstatic.com/image/thumb/Publication/ab/98/68/mzi.sezczgip.jpg/400x400bb.jpg"
+        },
+        {
+          "id": "1783471200689-5",
+          "title": "More money than God",
+          "author": "Sebastian Mallaby",
+          "year": 2010,
+          "photo": "https://is1-ssl.mzstatic.com/image/thumb/Publication/ca/96/5d/mzi.kqqmuwfh.jpg/400x400bb.jpg"
+        },
+        {
+          "id": "1783471187153-4",
+          "title": "Barça",
+          "author": "Simon Kuper",
+          "year": 2021,
+          "photo": "https://is1-ssl.mzstatic.com/image/thumb/Publication221/v4/8f/99/01/8f990169-9ff4-cfa7-7b22-fe364eb162f5/1040729400.jpg/400x400bb.jpg"
+        },
+        {
+          "id": "1783471167987-3",
+          "title": "Soccernomics",
+          "author": "Simon Kuper",
+          "year": 2009,
+          "photo": "https://is1-ssl.mzstatic.com/image/thumb/Publication211/v4/42/d6/71/42d67193-8c32-1503-275e-2f1908dde277/9781645030812.jpg/400x400bb.jpg"
+        },
+        {
+          "id": "1783471152379-2",
+          "title": "Today We Die a Little",
+          "author": "Richard Askwith",
+          "year": 2016,
+          "photo": "https://is1-ssl.mzstatic.com/image/thumb/Publication122/v4/ca/6a/fa/ca6afa83-2927-e4e0-e399-eefb9a0718e5/9781568585505.jpg/400x400bb.jpg"
+        },
+        {
+          "id": "1783471112777-1",
+          "title": "Born to Run",
+          "author": "Christopher McDougall",
+          "year": 2009,
+          "photo": "https://is1-ssl.mzstatic.com/image/thumb/Publication/v4/5f/c6/f7/5fc6f72f-d462-3a4d-9fc5-c8c9abcc6bef/9780307271914.jpg/400x400bb.jpg"
+        }
+      ],
+      "updatedAt": 1783488755196
+    }
+  },
+  "wishlists": {
+    "f6cc9724-6fe4-4c01-90e7-295551f986af": {
+      "items": [
+        {
+          "title": "Flesh",
+          "author": "David Szalay",
+          "year": 2025,
+          "coverUrl": "https://covers.openlibrary.org/b/id/15180002-M.jpg",
+          "amazonUrl": "https://www.amazon.com/s?k=Flesh%20David%20Szalay",
+          "goodreadsUrl": "https://www.goodreads.com/search?q=Flesh%20David%20Szalay",
+          "lists": []
+        },
+        {
+          "title": "The power broker: Robert Moses and the fall of New York",
+          "author": "Robert A. Caro",
+          "year": 1974,
+          "coverUrl": "https://covers.openlibrary.org/b/id/253659-M.jpg",
+          "amazonUrl": "https://www.amazon.com/s?k=The%20power%20broker%3A%20Robert%20Moses%20and%20the%20fall%20of%20New%20York%20Robert%20A.%20Caro",
+          "goodreadsUrl": "https://www.goodreads.com/search?q=The%20power%20broker%3A%20Robert%20Moses%20and%20the%20fall%20of%20New%20York%20Robert%20A.%20Caro",
+          "lists": []
+        }
+      ],
+      "updatedAt": 1783487457008
+    }
+  },
+  "dismissed": {}
+}

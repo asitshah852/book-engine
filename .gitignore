@@ -1,0 +1,18 @@
+/node_modules
+/.next
+/out
+/build
+next-env.d.ts
+*.tsbuildinfo
+
+# local env with secrets
+.env
+.env.local
+
+# file-backed data store (dev/self-host default)
+/data/*.json
+!/data/editorial-lists.json
+!/data/seed-store.json
+
+# local runtime logs
+*.log

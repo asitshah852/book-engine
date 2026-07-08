@@ -1,0 +1,109 @@
+/* Design tokens + base + hover states. Colors mirror the design handoff exactly
+   (oklch throughout). Inline styles in components carry the rest of the spec;
+   pseudo-states that can't be inlined live here as scoped classes. */
+
+:root {
+  --bg: oklch(97.5% 0 0);
+  --surface: oklch(100% 0 0);
+  --text: oklch(20% 0 0);
+  --text-2: oklch(46% 0 0);
+  --text-3: oklch(55% 0 0);
+  --accent: oklch(52% 0.16 258);
+  --accent-hover: oklch(42% 0.16 258);
+  --accent-bg: oklch(96% 0.02 258);
+  --success: oklch(45% 0.13 150);
+  --error: oklch(52% 0.18 25);
+  --border: oklch(89% 0 0);
+  --border-dashed: oklch(80% 0 0);
+  --border-disabled: oklch(85% 0 0);
+}
+
+@keyframes bre-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes bre-fade {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--bg);
+  font-family: -apple-system, "Helvetica Neue", Helvetica, Arial, sans-serif;
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  color: var(--accent-hover);
+  text-decoration: underline;
+}
+
+/* Dashed camera / paste tiles */
+.bre-tile {
+  transition: border-color 0.15s, color 0.15s;
+}
+.bre-tile:hover {
+  border-color: var(--accent) !important;
+  color: var(--accent) !important;
+}
+
+/* Search dropdown rows */
+.bre-search-row {
+  transition: background 0.15s;
+}
+.bre-search-row:hover {
+  background: var(--accent-bg);
+}
+
+/* Remove (×) button on shelf cards */
+.bre-remove {
+  transition: background 0.15s;
+}
+.bre-remove:hover {
+  background: oklch(90% 0 0);
+}
+
+/* Thumbs-down turns red on hover */
+.bre-thumbdown {
+  transition: border-color 0.15s, color 0.15s;
+}
+.bre-thumbdown:hover {
+  border-color: oklch(52% 0.18 25) !important;
+  color: oklch(52% 0.18 25) !important;
+}
+
+/* Genre steer chips */
+.bre-chip {
+  transition: all 0.15s;
+}
+.bre-chip:hover {
+  border-color: var(--accent) !important;
+  color: var(--accent) !important;
+}
+
+input:focus,
+button:focus-visible {
+  outline: none;
+}

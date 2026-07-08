@@ -825,12 +825,11 @@ export default function BookEngine() {
     } catch {
       /* ignore */
     }
-    setProfileName(null);
-    lastPersisted.current = null;
-    lastPersistedWish.current = null;
-    lastPersistedDismiss.current = null;
-    // Wipe the slate so the next person on this device starts fresh and can't
-    // see the signed-out account's data (important on shared/public devices).
+    // Clear any guest copies in this browser, then hard-reload to a completely
+    // fresh, empty state. A reload guarantees nothing lingers from the signed-in
+    // session: the app re-mounts, sees no login cookie, and finds no guest data,
+    // so the next person on this device starts from a blank slate. (Asit's data
+    // stays safe on the server and comes back on the next sign-in.)
     try {
       localStorage.removeItem(GUEST_KEY);
       localStorage.removeItem(GUEST_WISH_KEY);
@@ -838,23 +837,7 @@ export default function BookEngine() {
     } catch {
       /* ignore */
     }
-    setBooks([]);
-    setWishlist([]);
-    setDismissedTitles([]);
-    setResults([]);
-    setAddedTitles([]);
-    setLikedTitles([]);
-    setQuery("");
-    setSearchResults(null);
-    setRecency(null);
-    setMood([]);
-    setMoodText("");
-    setAdventurousness("balanced");
-    setProfileTags([]);
-    setProfileLoaded(false);
-    setProfileDraft("");
-    setCameraError(null);
-    setStep(1);
+    if (typeof window !== "undefined") window.location.reload();
   };
 
   // ── Recommendations ─────────────────────────────────────────────────────

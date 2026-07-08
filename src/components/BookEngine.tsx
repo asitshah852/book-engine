@@ -829,6 +829,32 @@ export default function BookEngine() {
     lastPersisted.current = null;
     lastPersistedWish.current = null;
     lastPersistedDismiss.current = null;
+    // Wipe the slate so the next person on this device starts fresh and can't
+    // see the signed-out account's data (important on shared/public devices).
+    try {
+      localStorage.removeItem(GUEST_KEY);
+      localStorage.removeItem(GUEST_WISH_KEY);
+      localStorage.removeItem(GUEST_DISMISS_KEY);
+    } catch {
+      /* ignore */
+    }
+    setBooks([]);
+    setWishlist([]);
+    setDismissedTitles([]);
+    setResults([]);
+    setAddedTitles([]);
+    setLikedTitles([]);
+    setQuery("");
+    setSearchResults(null);
+    setRecency(null);
+    setMood([]);
+    setMoodText("");
+    setAdventurousness("balanced");
+    setProfileTags([]);
+    setProfileLoaded(false);
+    setProfileDraft("");
+    setCameraError(null);
+    setStep(1);
   };
 
   // ── Recommendations ─────────────────────────────────────────────────────

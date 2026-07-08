@@ -52,6 +52,28 @@ function surnameKey(name: string): string {
   );
 }
 
+// Detect an Anthropic billing / spend-limit / out-of-credit failure so we can
+// show a plain message instead of a generic "try again".
+function isBudgetError(err: unknown): boolean {
+  const e = err as {
+    status?: number;
+    message?: string;
+    type?: string;
+    error?: { type?: string; message?: string };
+  };
+  const type = e?.error?.type || e?.type || "";
+  const msg = `${e?.message || ""} ${e?.error?.message || ""}`.toLowerCase();
+  return (
+    type === "billing_error" ||
+    msg.includes("credit balance") ||
+    msg.includes("billing") ||
+    msg.includes("spend limit") ||
+    msg.includes("usage limit") ||
+    msg.includes("monthly limit") ||
+    msg.includes("insufficient")
+  );
+}
+
 function recencyPrompt(recency: Recency): { text: string; cutoff: number | null } {
   const yearNow = new Date().getFullYear();
   if (recency === "last3") {
@@ -217,6 +239,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ results });
   } catch (err) {
     console.error("recommend error", err);
+    if (isBudgetError(err)) {
+      return NextResponse.json(
+        { error: "Monthly spend limit hit — please tell Asit to buy more tokens." },
+        { status: 200 }
+      );
+    }
     return NextResponse.json(
       { error: "Couldn't generate recommendations just now. Please try again." },
       { status: 502 }

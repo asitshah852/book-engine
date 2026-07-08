@@ -1,31 +1,36 @@
-# Deploying the Book Recommendation Engine (public, shared with friends)
+# Deploying the Book Recommendation Engine — FREE tier
 
-This guide gets the app onto the public internet with a **saved disk** (so
-accounts, shelves, reading lists, and "not interested" lists persist) and with
-**Asit's account already loaded** (seeded from `data/seed-store.json`).
+This puts the app online for **$0/month** using:
 
-Friends just visit the URL — they never need a Claude account or an API key.
-Your one Anthropic key (set as an env var below) powers everyone's requests, and
-you pay for that usage.
+- **Vercel** — free hosting, made for Next.js apps
+- **Upstash Redis** — a free little database that keeps everyone's shelves,
+  reading lists, and "not interested" lists (Vercel has no saved disk, so data
+  needs to live in a database)
+
+Asit's account (37 books + reading list) is **seeded in automatically** — sign
+in as "Asit" on the live site and it's all there.
+
+Friends just visit the URL — they never need a Claude account or a key. Your one
+Anthropic key powers everyone, and you pay only for that usage (cents per action;
+set a cap — see the end).
+
+> Everything below is free. The only thing that costs money is Anthropic usage,
+> which you control with a spending limit.
 
 ---
 
-## Before you start — 3 accounts (all free to sign up)
+## Accounts you'll create (all free)
 
 1. **GitHub** — https://github.com  (stores the code)
-2. **Render** — https://render.com  (runs the app; the persistent disk is a
-   paid add-on, ~US$7/mo — see the cost note at the end)
-3. **Anthropic API** — https://console.anthropic.com  (you already have a key)
-
-> Render is recommended because its dashboard is the most click-friendly.
-> Railway (https://railway.app) works too — same idea, a "Volume" instead of a
-> "Disk".
+2. **Vercel** — https://vercel.com  (runs the app) — sign in *with GitHub*
+3. **Upstash** — https://upstash.com  (the free database) — sign in *with GitHub*
+4. **Anthropic** — https://console.anthropic.com  (your key — you have this)
 
 ---
 
 ## Step 1 — Put the code on GitHub
 
-From this folder (`book-recommendation-engine`), in a terminal:
+In a terminal, from this folder (`book-recommendation-engine`):
 
 ```bash
 git init
@@ -33,9 +38,8 @@ git add .
 git commit -m "Book recommendation engine"
 ```
 
-Then on GitHub: **New repository** → give it a name (e.g. `book-engine`) → **Create**.
-GitHub shows a "push an existing repository" box — copy those two lines and run
-them, e.g.:
+On GitHub: **New repository** → name it (e.g. `book-engine`) → **Create**. Copy the
+"push an existing repository" lines it shows, e.g.:
 
 ```bash
 git remote add origin https://github.com/<your-username>/book-engine.git
@@ -43,45 +47,47 @@ git branch -M main
 git push -u origin main
 ```
 
-(You may be asked to sign in to GitHub in the browser the first time.)
+---
+
+## Step 2 — Create the free database (Upstash)
+
+1. Go to https://upstash.com → **Sign in with GitHub**.
+2. **Create Database** → give it a name → pick a region near you → **Create**.
+   (The free plan is selected by default.)
+3. On the database page, find the **REST API** section and copy these two values —
+   you'll paste them into Vercel next:
+   - `UPSTASH_REDIS_REST_URL`
+   - `UPSTASH_REDIS_REST_TOKEN`
 
 ---
 
-## Step 2 — Create the web service on Render
+## Step 3 — Deploy on Vercel
 
-1. Render dashboard → **New +** → **Web Service**.
-2. **Connect** your GitHub and pick the `book-engine` repo.
-3. Fill in:
-   - **Runtime:** Node
-   - **Build Command:** `npm install && npm run build`
-   - **Start Command:** `npm start`
-   - **Instance Type:** Starter (needed for a disk)
-4. Click **Advanced → Add Environment Variable** and add:
-   | Key | Value |
+1. Go to https://vercel.com → **Sign in with GitHub**.
+2. **Add New… → Project** → **Import** your `book-engine` repo.
+3. Vercel auto-detects Next.js — leave the build settings as-is.
+4. Open **Environment Variables** and add these (Name → Value):
+   | Name | Value |
    |---|---|
    | `ANTHROPIC_API_KEY` | your key from console.anthropic.com |
    | `SESSION_SECRET` | any long random string (mash the keyboard) |
-   | `DATA_DIR` | `/var/data` |
+   | `UPSTASH_REDIS_REST_URL` | the URL from Step 2 |
+   | `UPSTASH_REDIS_REST_TOKEN` | the token from Step 2 |
    | `ANTHROPIC_MODEL` | `claude-opus-4-8` (optional) |
-5. Still under Advanced → **Add Disk**:
-   - **Name:** `data`
-   - **Mount Path:** `/var/data`
-   - **Size:** 1 GB is plenty
-6. **Create Web Service**. Render builds and deploys (first build ~2–4 min).
+5. Click **Deploy**. First build takes ~2–3 minutes.
 
-When it's live you get a URL like `https://book-engine.onrender.com` — that's
-what you share with friends. Sign in as **Asit** and your 37 books + reading
-list are already there.
+You'll get a URL like `https://book-engine.vercel.app` — that's what you share.
+Sign in as **Asit** and your books are already there.
 
 ---
 
-## Step 3 — Cap your spending (do this once)
+## Step 4 — Cap your Anthropic spending (do this once)
 
 Because the app is public and runs on your key:
 
-- In **console.anthropic.com → Billing / Limits**, set a **monthly usage
-  limit** (e.g. $10–20) so it can never surprise you.
-- Keep an eye on usage the first few days after sharing.
+- In **console.anthropic.com → Billing / Limits**, set a **monthly usage limit**
+  (e.g. $10–20). It can never exceed that.
+- Glance at usage the first few days after sharing.
 
 ---
 
@@ -95,21 +101,27 @@ git commit -m "what changed"
 git push
 ```
 
-Render redeploys automatically. The disk (and everyone's data) is untouched by
-deploys.
+Vercel redeploys automatically. The database (everyone's data) is untouched.
 
 ---
 
+## Cancelling / walking away — all free, nothing to cancel
+
+- Vercel and Upstash free tiers have **no bill** — there's literally nothing to
+  cancel. You can delete the Vercel project and the Upstash database anytime with
+  a click, or just leave them.
+- The only spend is Anthropic usage, which stops the moment people stop using it
+  (and is capped by your limit).
+- Your data is also backed up in the two CSV files on your Desktop, and Asit's
+  account is seeded into the app itself — so nothing is ever lost.
+
 ## Good to know
 
-- **Data safety:** everything lives on the `/var/data` disk, which survives
-  restarts and redeploys. Take an occasional backup by downloading
-  `/var/data/store.json` from Render's shell, or ask me to add an in-app export.
+- **Free-tier limits** are generous for a group of friends (Upstash free allows
+  plenty of daily operations; Vercel free covers normal personal traffic). If the
+  app really takes off, both offer cheap paid tiers — but you'd only hit that with
+  real popularity.
 - **Privacy:** sign-in is name-only for now — anyone who types "Asit" sees that
   shelf. Fine among trusted friends; tell me when you want real per-person login.
-- **Cost:** the app itself is cheap to run. The two costs are (1) Render's
-  Starter instance + 1 GB disk (~US$7/mo total) and (2) Anthropic usage (cents
-  per action, capped by the limit you set in Step 3).
-- **Free alternative:** if you'd rather not pay Render's disk fee, the other
-  route is a free managed database (a bit more setup on my side). Say the word
-  and I'll switch storage over.
+- **Speed:** the very first request after a quiet period may be a little slow
+  (the free server "waking up"); after that it's snappy.

@@ -12,6 +12,7 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
+import { Redis } from "@upstash/redis";
 import type { ShelfBook, WishlistItem } from "./types";
 
 interface Account {
@@ -42,46 +43,67 @@ interface StoreShape {
   dismissed: Record<string, StoredDismissed>; // "not interested" titles, keyed by account id
 }
 
-// Writable data lives in DATA_DIR — point this at a host's persistent disk in
-// production (e.g. DATA_DIR=/var/data). Defaults to the project's data folder
-// for local development.
+// Storage backend selection:
+//  • If UPSTASH_REDIS_REST_URL + _TOKEN are set (production on a serverless host
+//    like Vercel), the whole store lives in one Redis key.
+//  • Otherwise it's a JSON file under DATA_DIR (local dev / disk-backed hosts).
+// Either way, a fresh/empty store is initialised from the bundled seed, so a new
+// deployment already contains the seeded account(s).
+const redis =
+  process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN
+    ? Redis.fromEnv()
+    : null;
+const STORE_KEY = "bre:store";
+
 const DATA_DIR = process.env.DATA_DIR
   ? path.resolve(process.env.DATA_DIR)
   : path.join(process.cwd(), "data");
 const STORE_FILE = path.join(DATA_DIR, "store.json");
-// Read-only seed bundled with the app. On first run (empty disk) the store is
-// initialised from this, so a fresh deployment already contains seeded accounts.
 const SEED_FILE = path.join(process.cwd(), "data", "seed-store.json");
 
-// Serialize writes to avoid clobbering under concurrent requests.
+// Serialize file writes to avoid clobbering under concurrent requests.
 let writeChain: Promise<void> = Promise.resolve();
 
-async function readStore(): Promise<StoreShape> {
-  let raw: string;
-  try {
-    raw = await readFile(STORE_FILE, "utf8");
-  } catch {
-    // No live store yet — fall back to the bundled seed (first deploy).
-    try {
-      raw = await readFile(SEED_FILE, "utf8");
-    } catch {
-      return { accounts: [], shelves: {}, wishlists: {}, dismissed: {} };
-    }
+function normalize(parsed: unknown): StoreShape {
+  const p = (parsed || {}) as Partial<StoreShape>;
+  return {
+    accounts: Array.isArray(p.accounts) ? p.accounts : [],
+    shelves: p.shelves && typeof p.shelves === "object" ? p.shelves : {},
+    wishlists: p.wishlists && typeof p.wishlists === "object" ? p.wishlists : {},
+    dismissed: p.dismissed && typeof p.dismissed === "object" ? p.dismissed : {},
+  };
+}
+
+async function readBackend(): Promise<unknown | null> {
+  if (redis) {
+    const v = await redis.get<StoreShape>(STORE_KEY);
+    return v ?? null;
   }
   try {
-    const parsed = JSON.parse(raw);
-    return {
-      accounts: Array.isArray(parsed.accounts) ? parsed.accounts : [],
-      shelves: parsed.shelves && typeof parsed.shelves === "object" ? parsed.shelves : {},
-      wishlists: parsed.wishlists && typeof parsed.wishlists === "object" ? parsed.wishlists : {},
-      dismissed: parsed.dismissed && typeof parsed.dismissed === "object" ? parsed.dismissed : {},
-    };
+    return JSON.parse(await readFile(STORE_FILE, "utf8"));
   } catch {
-    return { accounts: [], shelves: {}, wishlists: {}, dismissed: {} };
+    return null;
   }
 }
 
+async function readSeed(): Promise<unknown | null> {
+  try {
+    return JSON.parse(await readFile(SEED_FILE, "utf8"));
+  } catch {
+    return null;
+  }
+}
+
+async function readStore(): Promise<StoreShape> {
+  const data = (await readBackend()) ?? (await readSeed());
+  return normalize(data);
+}
+
 async function writeStore(store: StoreShape): Promise<void> {
+  if (redis) {
+    await redis.set(STORE_KEY, store);
+    return;
+  }
   const run = async () => {
     await mkdir(DATA_DIR, { recursive: true });
     await writeFile(STORE_FILE, JSON.stringify(store, null, 2), "utf8");

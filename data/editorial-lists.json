@@ -1,5 +1,5 @@
 {
-  "_note": "Operator-maintained editorial-list / literary-prize dataset. Badges appear ONLY when a recommendation matches an entry here (title+author) or an author-level entry (Nobel) — the LLM's opinion of a book's awards is never trusted. Prize winners are stable, verifiable facts. Valid list codes: NYT, FT, Economist, BookerWinner, BookerShortlist, PulitzerWinner, PulitzerFinalist, WomensPrize, NationalBookAward, HugoAward, NebulaAward, NobelLaureate. 'authors' entries badge every book by that author.",
+  "_note": "Operator-maintained editorial-list / literary-prize dataset. Badges appear ONLY when a recommendation matches an entry here (title+author) or an author-level entry (Nobel) — the LLM's opinion of a book's awards is never trusted. Prize winners are stable, verifiable facts. Valid list codes: NYT, FT, Economist, BookerWinner, BookerShortlist, PulitzerWinner, PulitzerFinalist, WomensPrize, NationalBookAward, HugoAward, NebulaAward, NobelLaureate, IntlBooker, NBCC, Costa, FTBusiness, BaillieGifford, PulitzerHistory, PulitzerBiography, PulitzerNonfiction, WilliamHillSports. 'authors' entries badge every book by that author.",
   "entries": [
     { "title": "The Blind Assassin", "author": "Margaret Atwood", "lists": ["BookerWinner"] },
     { "title": "True History of the Kelly Gang", "author": "Peter Carey", "lists": ["BookerWinner"] },
@@ -190,7 +190,42 @@
     { "title": "The Curious Incident of the Dog in the Night-Time", "author": "Mark Haddon", "lists": ["Costa"] },
     { "title": "Days Without End", "author": "Sebastian Barry", "lists": ["Costa"] },
 
-    { "title": "Cloud Atlas", "author": "David Mitchell", "lists": ["BookerShortlist"] }
+    { "title": "Cloud Atlas", "author": "David Mitchell", "lists": ["BookerShortlist"] },
+
+    { "title": "The World Is Flat", "author": "Thomas Friedman", "lists": ["FTBusiness"] },
+    { "title": "When Markets Collide", "author": "Mohamed El-Erian", "lists": ["FTBusiness"] },
+    { "title": "Lords of Finance", "author": "Liaquat Ahamed", "lists": ["FTBusiness"] },
+    { "title": "Fault Lines", "author": "Raghuram Rajan", "lists": ["FTBusiness"] },
+    { "title": "Poor Economics", "author": "Abhijit Banerjee", "lists": ["FTBusiness"] },
+    { "title": "Private Empire", "author": "Steve Coll", "lists": ["FTBusiness"] },
+    { "title": "The Everything Store", "author": "Brad Stone", "lists": ["FTBusiness"] },
+    { "title": "Capital in the Twenty-First Century", "author": "Thomas Piketty", "lists": ["FTBusiness"] },
+    { "title": "Bad Blood", "author": "John Carreyrou", "lists": ["FTBusiness"] },
+    { "title": "Invisible Women", "author": "Caroline Criado Perez", "lists": ["FTBusiness"] },
+    { "title": "No Filter", "author": "Sarah Frier", "lists": ["FTBusiness"] },
+    { "title": "This Is How They Tell Me the World Ends", "author": "Nicole Perlroth", "lists": ["FTBusiness"] },
+    { "title": "Chip War", "author": "Chris Miller", "lists": ["FTBusiness"] },
+
+    { "title": "The Invention of Nature", "author": "Andrea Wulf", "lists": ["BaillieGifford"] },
+    { "title": "East West Street", "author": "Philippe Sands", "lists": ["BaillieGifford"] },
+    { "title": "Chernobyl: History of a Tragedy", "author": "Serhii Plokhy", "lists": ["BaillieGifford"] },
+    { "title": "The Volunteer", "author": "Jack Fairweather", "lists": ["BaillieGifford"] },
+    { "title": "Empire of Pain", "author": "Patrick Radden Keefe", "lists": ["BaillieGifford"] },
+    { "title": "Super-Infinite", "author": "Katherine Rundell", "lists": ["BaillieGifford"] },
+
+    { "title": "Guns, Germs, and Steel", "author": "Jared Diamond", "lists": ["PulitzerNonfiction"] },
+    { "title": "Gulag", "author": "Anne Applebaum", "lists": ["PulitzerNonfiction"] },
+    { "title": "The Emperor of All Maladies", "author": "Siddhartha Mukherjee", "lists": ["PulitzerNonfiction"] },
+    { "title": "The Sixth Extinction", "author": "Elizabeth Kolbert", "lists": ["PulitzerNonfiction"] },
+
+    { "title": "Battle Cry of Freedom", "author": "James M. McPherson", "lists": ["PulitzerHistory"] },
+    { "title": "The Fiery Trial", "author": "Eric Foner", "lists": ["PulitzerHistory"] },
+
+    { "title": "The Power Broker", "author": "Robert Caro", "lists": ["PulitzerBiography"] },
+    { "title": "Washington: A Life", "author": "Ron Chernow", "lists": ["PulitzerBiography"] },
+
+    { "title": "Fever Pitch", "author": "Nick Hornby", "lists": ["WilliamHillSports"] },
+    { "title": "A Life Too Short", "author": "Ronald Reng", "lists": ["WilliamHillSports"] }
   ],
   "authors": [
     { "author": "Kazuo Ishiguro", "lists": ["NobelLaureate"] },

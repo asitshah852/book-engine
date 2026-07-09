@@ -19,22 +19,35 @@ const STRIPE_COLORS = [
 ];
 
 // Badge display: label + tier (prize winners get the gold ★ treatment).
-const BADGE_META: Record<string, { label: string; tier: "prize" | "list" }> = {
-  NobelLaureate: { label: "Nobel Laureate", tier: "prize" },
-  PulitzerWinner: { label: "Pulitzer Prize", tier: "prize" },
-  BookerWinner: { label: "Booker Prize", tier: "prize" },
-  IntlBooker: { label: "International Booker", tier: "prize" },
-  WomensPrize: { label: "Women's Prize", tier: "prize" },
-  NationalBookAward: { label: "National Book Award", tier: "prize" },
-  NBCC: { label: "NBCC Award", tier: "prize" },
-  Costa: { label: "Costa Book of the Year", tier: "prize" },
-  HugoAward: { label: "Hugo Award", tier: "prize" },
-  NebulaAward: { label: "Nebula Award", tier: "prize" },
-  PulitzerFinalist: { label: "Pulitzer Finalist", tier: "list" },
-  BookerShortlist: { label: "Booker Shortlist", tier: "list" },
-  NYT: { label: "NYT Best Books", tier: "list" },
-  FT: { label: "FT Best Books", tier: "list" },
-  Economist: { label: "Economist Books of the Year", tier: "list" },
+// Each badge links to the award / list's own page so readers can browse the
+// full roll of winners. Wikipedia list-pages are used for the prizes (they hold
+// the complete, up-to-date winner + shortlist history); publishers' own hubs for
+// the editorial "best books" lists.
+const BADGE_META: Record<
+  string,
+  { label: string; tier: "prize" | "list"; url: string }
+> = {
+  NobelLaureate: { label: "Nobel Laureate", tier: "prize", url: "https://www.nobelprize.org/prizes/lists/all-nobel-prizes-in-literature/" },
+  PulitzerWinner: { label: "Pulitzer Prize", tier: "prize", url: "https://en.wikipedia.org/wiki/Pulitzer_Prize_for_Fiction" },
+  BookerWinner: { label: "Booker Prize", tier: "prize", url: "https://en.wikipedia.org/wiki/Booker_Prize" },
+  IntlBooker: { label: "International Booker", tier: "prize", url: "https://en.wikipedia.org/wiki/International_Booker_Prize" },
+  WomensPrize: { label: "Women's Prize", tier: "prize", url: "https://en.wikipedia.org/wiki/Women%27s_Prize_for_Fiction" },
+  NationalBookAward: { label: "National Book Award", tier: "prize", url: "https://en.wikipedia.org/wiki/National_Book_Award_for_Fiction" },
+  NBCC: { label: "NBCC Award", tier: "prize", url: "https://en.wikipedia.org/wiki/National_Book_Critics_Circle_Award" },
+  Costa: { label: "Costa Book of the Year", tier: "prize", url: "https://en.wikipedia.org/wiki/Costa_Book_Awards" },
+  HugoAward: { label: "Hugo Award", tier: "prize", url: "https://en.wikipedia.org/wiki/Hugo_Award_for_Best_Novel" },
+  NebulaAward: { label: "Nebula Award", tier: "prize", url: "https://en.wikipedia.org/wiki/Nebula_Award_for_Best_Novel" },
+  FTBusiness: { label: "FT Business Book of the Year", tier: "prize", url: "https://en.wikipedia.org/wiki/Financial_Times_and_McKinsey_Business_Book_of_the_Year_Award" },
+  BaillieGifford: { label: "Baillie Gifford Prize", tier: "prize", url: "https://en.wikipedia.org/wiki/Baillie_Gifford_Prize" },
+  PulitzerHistory: { label: "Pulitzer (History)", tier: "prize", url: "https://en.wikipedia.org/wiki/Pulitzer_Prize_for_History" },
+  PulitzerBiography: { label: "Pulitzer (Biography)", tier: "prize", url: "https://en.wikipedia.org/wiki/Pulitzer_Prize_for_Biography" },
+  PulitzerNonfiction: { label: "Pulitzer (Nonfiction)", tier: "prize", url: "https://en.wikipedia.org/wiki/Pulitzer_Prize_for_General_Nonfiction" },
+  WilliamHillSports: { label: "William Hill Sports Book", tier: "prize", url: "https://en.wikipedia.org/wiki/William_Hill_Sports_Book_of_the_Year" },
+  PulitzerFinalist: { label: "Pulitzer Finalist", tier: "list", url: "https://en.wikipedia.org/wiki/Pulitzer_Prize_for_Fiction" },
+  BookerShortlist: { label: "Booker Shortlist", tier: "list", url: "https://en.wikipedia.org/wiki/Booker_Prize" },
+  NYT: { label: "NYT Best Books", tier: "list", url: "https://www.nytimes.com/spotlight/best-books" },
+  FT: { label: "FT Best Books", tier: "list", url: "https://www.ft.com/books" },
+  Economist: { label: "Economist Books of the Year", tier: "list", url: "https://www.economist.com/culture" },
 };
 const BADGE_ORDER = [
   "NobelLaureate",
@@ -47,6 +60,12 @@ const BADGE_ORDER = [
   "Costa",
   "HugoAward",
   "NebulaAward",
+  "FTBusiness",
+  "BaillieGifford",
+  "PulitzerHistory",
+  "PulitzerBiography",
+  "PulitzerNonfiction",
+  "WilliamHillSports",
   "PulitzerFinalist",
   "BookerShortlist",
   "NYT",
@@ -2120,11 +2139,15 @@ export default function BookEngine() {
                         {[...rec.lists]
                           .sort((a, b) => BADGE_ORDER.indexOf(a) - BADGE_ORDER.indexOf(b))
                           .map((l) => {
-                            const meta = BADGE_META[l] || { label: l, tier: "list" as const };
+                            const meta = BADGE_META[l] || { label: l, tier: "list" as const, url: "" };
                             const prize = meta.tier === "prize";
                             return (
-                              <span
+                              <a
                                 key={l}
+                                href={meta.url || undefined}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                title={`See the full ${meta.label} list →`}
                                 style={{
                                   fontSize: 11,
                                   fontWeight: prize ? 700 : 600,
@@ -2134,11 +2157,13 @@ export default function BookEngine() {
                                   background: prize ? "oklch(90% 0.07 90)" : "oklch(94% 0.03 90)",
                                   color: prize ? "oklch(38% 0.11 70)" : "oklch(45% 0.09 70)",
                                   border: prize ? "1px solid oklch(80% 0.09 80)" : "1px solid transparent",
+                                  textDecoration: "none",
+                                  cursor: meta.url ? "pointer" : "default",
                                 }}
                               >
                                 {prize ? "★ " : ""}
                                 {meta.label}
-                              </span>
+                              </a>
                             );
                           })}
                       </div>
@@ -2599,11 +2624,15 @@ export default function BookEngine() {
                             .sort((a, b) => BADGE_ORDER.indexOf(a) - BADGE_ORDER.indexOf(b))
                             .slice(0, 3)
                             .map((l) => {
-                              const meta = BADGE_META[l] || { label: l, tier: "list" as const };
+                              const meta = BADGE_META[l] || { label: l, tier: "list" as const, url: "" };
                               const prize = meta.tier === "prize";
                               return (
-                                <span
+                                <a
                                   key={l}
+                                  href={meta.url || undefined}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  title={`See the full ${meta.label} list →`}
                                   style={{
                                     fontSize: 10.5,
                                     fontWeight: prize ? 700 : 600,
@@ -2611,11 +2640,13 @@ export default function BookEngine() {
                                     borderRadius: 999,
                                     background: prize ? "oklch(90% 0.07 90)" : "oklch(94% 0.03 90)",
                                     color: prize ? "oklch(38% 0.11 70)" : "oklch(45% 0.09 70)",
+                                    textDecoration: "none",
+                                    cursor: meta.url ? "pointer" : "default",
                                   }}
                                 >
                                   {prize ? "★ " : ""}
                                   {meta.label}
-                                </span>
+                                </a>
                               );
                             })}
                         </div>

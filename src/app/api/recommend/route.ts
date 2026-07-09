@@ -40,6 +40,12 @@ const PRIZE_CODES = new Set([
   "Costa",
   "HugoAward",
   "NebulaAward",
+  "FTBusiness",
+  "BaillieGifford",
+  "PulitzerHistory",
+  "PulitzerBiography",
+  "PulitzerNonfiction",
+  "WilliamHillSports",
 ]);
 
 function badgeScore(r: Recommendation): number {

@@ -17,7 +17,13 @@ export type EditorialList =
   | "NobelLaureate"
   | "IntlBooker"
   | "NBCC"
-  | "Costa";
+  | "Costa"
+  | "FTBusiness"
+  | "BaillieGifford"
+  | "PulitzerHistory"
+  | "PulitzerBiography"
+  | "PulitzerNonfiction"
+  | "WilliamHillSports";
 
 /** A canonical, catalog-verified book entity. */
 export interface Book {

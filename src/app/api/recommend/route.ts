@@ -74,9 +74,39 @@ function isBudgetError(err: unknown): boolean {
     msg.includes("credit balance") ||
     msg.includes("billing") ||
     msg.includes("spend limit") ||
+    msg.includes("spending limit") ||
     msg.includes("usage limit") ||
     msg.includes("monthly limit") ||
+    msg.includes("quota") ||
     msg.includes("insufficient")
+  );
+}
+
+// Detect a transient upstream hiccup (model briefly overloaded, rate-limited, a
+// 5xx, or a timeout) so we can tell the reader to simply try again in a moment,
+// rather than showing the same message we'd use for a real, persistent failure.
+function isTransientError(err: unknown): boolean {
+  const e = err as {
+    status?: number;
+    message?: string;
+    type?: string;
+    error?: { type?: string };
+  };
+  const status = e?.status ?? 0;
+  const type = e?.error?.type || e?.type || "";
+  const msg = `${e?.message || ""}`.toLowerCase();
+  return (
+    status === 429 ||
+    status === 529 ||
+    (status >= 500 && status <= 599) ||
+    type === "overloaded_error" ||
+    type === "rate_limit_error" ||
+    type === "api_error" ||
+    msg.includes("overloaded") ||
+    msg.includes("timeout") ||
+    msg.includes("timed out") ||
+    msg.includes("econnreset") ||
+    msg.includes("fetch failed")
   );
 }
 
@@ -248,6 +278,12 @@ export async function POST(request: Request) {
     if (isBudgetError(err)) {
       return NextResponse.json(
         { error: "Monthly spend limit hit — please tell Asit to buy more tokens." },
+        { status: 200 }
+      );
+    }
+    if (isTransientError(err)) {
+      return NextResponse.json(
+        { error: "Claude is briefly busy right now — please tap the button again in a few seconds." },
         { status: 200 }
       );
     }

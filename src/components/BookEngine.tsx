@@ -153,6 +153,7 @@ export default function BookEngine() {
   const [dismissedTitles, setDismissedTitles] = useState<string[]>([]);
   const [likedTitles, setLikedTitles] = useState<string[]>([]);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [moreError, setMoreError] = useState<string | null>(null);
   const [dragActive, setDragActive] = useState(false);
   // Step 2 preference controls
@@ -184,6 +185,9 @@ export default function BookEngine() {
   const lastPersistedWish = useRef<WishlistItem[] | null>(null);
   const persistDismissTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastPersistedDismiss = useRef<string[] | null>(null);
+  // Every recommendation title shown this session — excluded from future picks
+  // so refreshing / "show me more" never repeats the same books.
+  const seenRef = useRef<Set<string>>(new Set());
 
   booksRef.current = books;
   stepRef.current = step;
@@ -674,6 +678,11 @@ export default function BookEngine() {
     setResults((rs) => rs.filter((r) => r.title !== rec.title));
   };
 
+  // Remember every title shown this session so future picks never repeat them.
+  const recordSeen = (recs: Recommendation[]) => {
+    for (const r of recs) seenRef.current.add((r.title || "").toLowerCase());
+  };
+
   // Fetch more picks and append them (no starting over). Excludes everything
   // already shown or thumbed-down; liked picks feed back in as extra taste.
   const loadMore = async (steer?: string) => {
@@ -693,7 +702,7 @@ export default function BookEngine() {
           books: [...shelf, ...likedExtras],
           recency,
           steer,
-          exclude: [...dismissedTitles, ...shownTitles],
+          exclude: [...dismissedTitles, ...Array.from(seenRef.current), ...shownTitles],
           ...prefs(),
         }),
       });
@@ -703,6 +712,7 @@ export default function BookEngine() {
           data.error || "No more matches right now — try a different tweak or Start over."
         );
       } else {
+        recordSeen(data.results as Recommendation[]);
         setResults((rs) => {
           const seen = new Set(rs.map((r) => r.title.toLowerCase()));
           const fresh = (data.results as Recommendation[]).filter(
@@ -715,6 +725,44 @@ export default function BookEngine() {
       setMoreError("Couldn't load more just now. Please try again.");
     } finally {
       setLoadingMore(false);
+    }
+  };
+
+  // Replace the current picks with a whole new set (like turning to a fresh
+  // shelf), excluding everything already seen this session so nothing repeats.
+  const refreshPicks = async () => {
+    if (refreshing || loadingMore || !recency) return;
+    setRefreshing(true);
+    setMoreError(null);
+    const shelf = booksRef.current.filter((b) => b.title && b.title.trim() && !b.needsTitle);
+    const likedExtras = results
+      .filter((r) => likedTitles.includes(r.title))
+      .map((r) => ({ id: newId(), title: r.title, author: r.author, year: r.year, photo: null }));
+    try {
+      const res = await fetch("/api/recommend", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          books: [...shelf, ...likedExtras],
+          recency,
+          exclude: [...dismissedTitles, ...Array.from(seenRef.current)],
+          ...prefs(),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.results || data.results.length === 0) {
+        setMoreError(
+          data.error || "No fresh picks left right now — try a category below or Start over."
+        );
+      } else {
+        recordSeen(data.results as Recommendation[]);
+        setResults(data.results);
+        if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
+      }
+    } catch {
+      setMoreError("Couldn't refresh just now. Please try again.");
+    } finally {
+      setRefreshing(false);
     }
   };
 
@@ -853,9 +901,9 @@ export default function BookEngine() {
           books: booksRef.current.filter((b) => b.title && b.title.trim() && !b.needsTitle),
           recency,
           steer,
-          // Never re-suggest a book the reader already dismissed as "read before",
-          // and when re-steering, exclude what's already on screen too.
-          exclude: [...dismissedTitles, ...(steer ? results.map((r) => r.title) : [])],
+          // Never re-suggest a dismissed book, or anything already shown this
+          // session — so each run brings genuinely new titles.
+          exclude: [...dismissedTitles, ...Array.from(seenRef.current)],
           ...prefs(),
         }),
       });
@@ -865,6 +913,7 @@ export default function BookEngine() {
         setStep(3);
         return;
       }
+      recordSeen(data.results);
       setResults(data.results);
       setStep(4);
     } catch {
@@ -933,6 +982,8 @@ export default function BookEngine() {
     setLikedTitles([]);
     setMoreError(null);
     setLoadingMore(false);
+    setRefreshing(false);
+    seenRef.current.clear();
     setMood([]);
     setMoodText("");
     setAdventurousness("balanced");
@@ -2024,9 +2075,44 @@ export default function BookEngine() {
             <h1 style={{ fontSize: 28, fontWeight: 700, margin: "0 0 6px", letterSpacing: "-.01em" }}>
               Your next 5 books
             </h1>
-            <p style={{ fontSize: 15, color: "oklch(46% 0 0)", margin: "0 0 28px", lineHeight: 1.5 }}>
+            <p style={{ fontSize: 15, color: "oklch(46% 0 0)", margin: "0 0 16px", lineHeight: 1.5 }}>
               {recencySummary}, based on the {inputBookCount} books you shared.
             </p>
+
+            <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 16 }}>
+              <button
+                onClick={refreshPicks}
+                disabled={refreshing || loadingMore}
+                style={{
+                  border: "1.5px solid oklch(85% 0 0)",
+                  background: "oklch(100% 0 0)",
+                  color: refreshing ? "oklch(55% 0 0)" : "oklch(30% 0 0)",
+                  fontSize: 13,
+                  fontWeight: 600,
+                  padding: "8px 14px",
+                  borderRadius: 999,
+                  cursor: refreshing ? "default" : "pointer",
+                  fontFamily: "inherit",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 8,
+                }}
+              >
+                {refreshing && (
+                  <span
+                    style={{
+                      width: 14,
+                      height: 14,
+                      borderRadius: "50%",
+                      border: "2px solid oklch(80% 0 0)",
+                      borderTopColor: "oklch(52% 0.16 258)",
+                      animation: "bre-spin .8s linear infinite",
+                    }}
+                  />
+                )}
+                {refreshing ? "Pulling a fresh set…" : "↻ Refresh — a whole new set"}
+              </button>
+            </div>
 
             <div style={{ display: "flex", flexDirection: "column", gap: 14, marginBottom: 32 }}>
               {results.map((rec, i) => (
@@ -2113,14 +2199,26 @@ export default function BookEngine() {
                     )}
                     <div
                       style={{
+                        fontSize: 10.5,
+                        fontWeight: 700,
+                        letterSpacing: ".07em",
+                        textTransform: "uppercase",
+                        color: "oklch(58% 0.06 70)",
+                        marginTop: 12,
+                      }}
+                    >
+                      Bookseller&apos;s note
+                    </div>
+                    <div
+                      style={{
                         fontSize: 13.5,
-                        color: "oklch(35% 0 0)",
-                        marginTop: 10,
-                        lineHeight: 1.5,
+                        color: "oklch(33% 0 0)",
+                        marginTop: 3,
+                        lineHeight: 1.55,
                         fontStyle: "italic",
                       }}
                     >
-                      &quot;{rec.why}&quot;
+                      {rec.why}
                     </div>
                     <div style={{ display: "flex", gap: 16, marginTop: 10 }}>
                       <a

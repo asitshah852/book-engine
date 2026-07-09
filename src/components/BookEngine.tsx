@@ -253,33 +253,15 @@ export default function BookEngine() {
       } catch {
         /* signed out — fall through to the local guest shelf */
       }
-      // Signed out: restore the shelf we stashed in this browser last time.
+      // Signed out = a clean, empty session on purpose. We do NOT restore a
+      // shelf/reading list from this browser, so nothing lingers for the next
+      // person and sign-out always leaves a blank slate. Data persists only for
+      // signed-in accounts, server-side. (Clear any legacy guest cache.)
       if (!signedIn && !cancelled) {
         try {
-          const raw = localStorage.getItem(GUEST_KEY);
-          const guest = raw ? JSON.parse(raw) : null;
-          if (Array.isArray(guest) && guest.length) {
-            const restored: ShelfBook[] = guest.map((b: ShelfBook) => ({
-              ...b,
-              id: b.id || newId(),
-            }));
-            setBooks(restored);
-            backfillCovers(restored.filter((b) => !b.photo));
-          }
-        } catch {
-          /* corrupt storage — ignore */
-        }
-        try {
-          const rawW = localStorage.getItem(GUEST_WISH_KEY);
-          const gw = rawW ? JSON.parse(rawW) : null;
-          if (Array.isArray(gw) && gw.length) setWishlist(gw);
-        } catch {
-          /* ignore */
-        }
-        try {
-          const rawD = localStorage.getItem(GUEST_DISMISS_KEY);
-          const gd = rawD ? JSON.parse(rawD) : null;
-          if (Array.isArray(gd) && gd.length) setDismissedTitles(gd);
+          localStorage.removeItem(GUEST_KEY);
+          localStorage.removeItem(GUEST_WISH_KEY);
+          localStorage.removeItem(GUEST_DISMISS_KEY);
         } catch {
           /* ignore */
         }
@@ -322,70 +304,34 @@ export default function BookEngine() {
     }, 500);
   }, [books, profileName]);
 
-  // Signed out: keep the shelf in this browser so a refresh doesn't lose it.
-  // (Strip data: URL photos — too big for localStorage; covers are re-fetched.)
+  // Persist the wish list server-side — signed-in accounts only (no guest cache).
   useEffect(() => {
-    if (!hydratedRef.current || profileName) return;
-    try {
-      const clean = books
-        .filter((b) => b.title && b.title.trim() && !b.needsTitle)
-        .map((b) => ({
-          id: b.id,
-          title: b.title,
-          author: b.author || "",
-          year: b.year ?? null,
-          photo: b.photo && !b.photo.startsWith("data:") ? b.photo : null,
-        }));
-      localStorage.setItem(GUEST_KEY, JSON.stringify(clean));
-    } catch {
-      /* quota — ignore */
-    }
-  }, [books, profileName]);
-
-  // Persist the wish list — server when signed in, this browser when a guest.
-  useEffect(() => {
-    if (!hydratedRef.current) return;
-    if (profileName) {
-      if (wishlist === lastPersistedWish.current) return;
-      lastPersistedWish.current = wishlist;
-      if (persistWishTimer.current) clearTimeout(persistWishTimer.current);
-      persistWishTimer.current = setTimeout(() => {
-        fetch("/api/wishlist", {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ items: wishlist }),
-        }).catch(() => {});
-      }, 500);
-    } else {
-      try {
-        localStorage.setItem(GUEST_WISH_KEY, JSON.stringify(wishlist));
-      } catch {
-        /* quota — ignore */
-      }
-    }
+    if (!hydratedRef.current || !profileName) return;
+    if (wishlist === lastPersistedWish.current) return;
+    lastPersistedWish.current = wishlist;
+    if (persistWishTimer.current) clearTimeout(persistWishTimer.current);
+    persistWishTimer.current = setTimeout(() => {
+      fetch("/api/wishlist", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ items: wishlist }),
+      }).catch(() => {});
+    }, 500);
   }, [wishlist, profileName]);
 
-  // Persist the "not interested" (thumbs-down) list so those books never return.
+  // Persist the "not interested" list server-side — signed-in accounts only.
   useEffect(() => {
-    if (!hydratedRef.current) return;
-    if (profileName) {
-      if (dismissedTitles === lastPersistedDismiss.current) return;
-      lastPersistedDismiss.current = dismissedTitles;
-      if (persistDismissTimer.current) clearTimeout(persistDismissTimer.current);
-      persistDismissTimer.current = setTimeout(() => {
-        fetch("/api/dismissed", {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ titles: dismissedTitles }),
-        }).catch(() => {});
-      }, 500);
-    } else {
-      try {
-        localStorage.setItem(GUEST_DISMISS_KEY, JSON.stringify(dismissedTitles));
-      } catch {
-        /* quota — ignore */
-      }
-    }
+    if (!hydratedRef.current || !profileName) return;
+    if (dismissedTitles === lastPersistedDismiss.current) return;
+    lastPersistedDismiss.current = dismissedTitles;
+    if (persistDismissTimer.current) clearTimeout(persistDismissTimer.current);
+    persistDismissTimer.current = setTimeout(() => {
+      fetch("/api/dismissed", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ titles: dismissedTitles }),
+      }).catch(() => {});
+    }, 500);
   }, [dismissedTitles, profileName]);
 
   // ── Search ──────────────────────────────────────────────────────────────

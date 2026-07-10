@@ -216,6 +216,7 @@ export async function saveWishlist(
       author: i.author || "",
       year: i.year ?? null,
       coverUrl: i.coverUrl && !i.coverUrl.startsWith("data:") ? i.coverUrl : null,
+      isbn: i.isbn ?? null,
       amazonUrl: i.amazonUrl || "",
       goodreadsUrl: i.goodreadsUrl || "",
       lists: Array.isArray(i.lists) ? i.lists : [],

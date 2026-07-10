@@ -1,17 +1,47 @@
 import { NextResponse } from "next/server";
 import { generateCandidates } from "@/lib/anthropic";
-import { verifyBook, fetchCover } from "@/lib/catalog";
+import { verifyBook, fetchCover, isEnglishIsbn } from "@/lib/catalog";
 import { verifyLists } from "@/lib/editorial";
 import { HAS_ANTHROPIC_KEY, AMAZON_AFFILIATE_TAG } from "@/lib/config";
 import type { Recency, Recommendation, ShelfBook } from "@/lib/types";
 
-function amazonUrl(title: string, author: string): string {
+/** Convert an ISBN-13 (978-prefixed) to its ISBN-10 form, for Amazon /dp/ URLs
+ *  which key off ISBN-10 / ASIN. Returns null for anything else. */
+function isbn13to10(isbn13: string): string | null {
+  const s = isbn13.replace(/[^0-9]/g, "");
+  if (!/^978\d{10}$/.test(s)) return null;
+  const core = s.slice(3, 12); // 9 significant digits
+  let sum = 0;
+  for (let i = 0; i < 9; i++) sum += (10 - i) * Number(core[i]);
+  const check = (11 - (sum % 11)) % 11;
+  return core + (check === 10 ? "X" : String(check));
+}
+
+/** Normalise a catalog ISBN to an ISBN-10 when possible (for Amazon /dp/). */
+function toIsbn10(isbn: string | null | undefined): string | null {
+  if (!isbn) return null;
+  const s = isbn.replace(/[^0-9Xx]/g, "").toUpperCase();
+  if (/^\d{9}[\dX]$/.test(s)) return s; // already ISBN-10
+  if (/^\d{13}$/.test(s)) return isbn13to10(s);
+  return null;
+}
+
+// Deep-link straight to the book's own page when we have an English-market ISBN
+// from the catalog; fall back to a search otherwise (incl. foreign-edition ISBNs
+// that would land on a wrong-language product page).
+function amazonUrl(title: string, author: string, isbn?: string | null): string {
+  const tagQ = AMAZON_AFFILIATE_TAG ? `?tag=${encodeURIComponent(AMAZON_AFFILIATE_TAG)}` : "";
+  const isbn10 = isEnglishIsbn(isbn) ? toIsbn10(isbn) : null;
+  if (isbn10) return `https://www.amazon.com/dp/${isbn10}${tagQ}`;
   const q = encodeURIComponent(`${title} ${author}`.trim());
   const tag = AMAZON_AFFILIATE_TAG ? `&tag=${encodeURIComponent(AMAZON_AFFILIATE_TAG)}` : "";
   return `https://www.amazon.com/s?k=${q}${tag}`;
 }
 
-function goodreadsUrl(title: string, author: string): string {
+function goodreadsUrl(title: string, author: string, isbn?: string | null): string {
+  const clean = (isbn || "").replace(/[^0-9Xx]/g, "");
+  // Goodreads resolves /book/isbn/<isbn> to the book's own page.
+  if (isEnglishIsbn(clean)) return `https://www.goodreads.com/book/isbn/${clean}`;
   return `https://www.goodreads.com/search?q=${encodeURIComponent(`${title} ${author}`.trim())}`;
 }
 
@@ -213,8 +243,9 @@ export async function POST(request: Request) {
             why: c.why,
             lists,
             coverUrl: coverUrl || null,
-            amazonUrl: amazonUrl(doc.title, author),
-            goodreadsUrl: goodreadsUrl(doc.title, author),
+            isbn: doc.isbn ?? null,
+            amazonUrl: amazonUrl(doc.title, author, doc.isbn),
+            goodreadsUrl: goodreadsUrl(doc.title, author, doc.isbn),
           },
           rating: doc.rating ?? null,
           ratingsCount: doc.ratingsCount ?? null,

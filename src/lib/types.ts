@@ -32,6 +32,9 @@ export interface Book {
   year: number | null;
   isbn?: string | null;
   coverUrl?: string | null;
+  /** BCP-47 language code from the catalog (e.g. "en"), used to prefer the
+   *  English edition when capturing ISBNs for store links. */
+  language?: string | null;
   /** Real reader rating signal (Google Books), used only for ranking — never asserted in UI. */
   rating?: number | null;
   ratingsCount?: number | null;
@@ -58,6 +61,7 @@ export interface Recommendation {
   /** Only lists confirmed against real editorial data — never the raw LLM claim. */
   lists: EditorialList[];
   coverUrl: string | null;
+  isbn?: string | null;
   amazonUrl: string;
   goodreadsUrl: string;
 }
@@ -68,6 +72,7 @@ export interface WishlistItem {
   author: string;
   year: number | null;
   coverUrl: string | null;
+  isbn?: string | null;
   amazonUrl: string;
   goodreadsUrl: string;
   lists: EditorialList[];

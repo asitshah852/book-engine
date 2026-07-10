@@ -68,6 +68,15 @@ function isStrongMatch(
   return titleOk && authorOk;
 }
 
+/** True when an ISBN is in the English-language registration group (0 or 1),
+ *  i.e. an English-market edition — the only ones we deep-link to on Amazon. */
+export function isEnglishIsbn(isbn: string | null | undefined): boolean {
+  const s = (isbn || "").replace(/[^0-9Xx]/g, "");
+  if (/^\d{13}$/.test(s)) return s.startsWith("9780") || s.startsWith("9781");
+  if (/^\d{9}[\dXx]$/.test(s)) return s.startsWith("0") || s.startsWith("1");
+  return false;
+}
+
 function yearFromDate(published?: string): number | null {
   if (!published) return null;
   const m = String(published).match(/\d{4}/);
@@ -87,6 +96,7 @@ interface GoogleVolume {
     title?: string;
     authors?: string[];
     publishedDate?: string;
+    language?: string;
     averageRating?: number;
     ratingsCount?: number;
     imageLinks?: { thumbnail?: string; smallThumbnail?: string };
@@ -113,13 +123,16 @@ function volumeToBook(v: GoogleVolume): Book | null {
     year: yearFromDate(info.publishedDate),
     isbn,
     coverUrl: upgradeGoogleCover(info.imageLinks?.thumbnail),
+    language: info.language ?? null,
     rating: info.averageRating ?? null,
     ratingsCount: info.ratingsCount ?? null,
   };
 }
 
-async function googleSearch(query: string): Promise<Book[]> {
-  const data = await fetchJson(googleUrl({ q: query }));
+async function googleSearch(query: string, langRestrict?: string): Promise<Book[]> {
+  const params: Record<string, string> = { q: query };
+  if (langRestrict) params.langRestrict = langRestrict;
+  const data = await fetchJson(googleUrl(params));
   const items: GoogleVolume[] = data.items || [];
   const seen = new Set<string>();
   const out: Book[] = [];
@@ -322,7 +335,11 @@ export async function verifyBook(
     const q = author
       ? `intitle:${title} inauthor:${author}`
       : `intitle:${title}`;
-    candidates.push(...(await googleSearch(q)));
+    // Bias toward the English edition (English-market app) so the ISBN we keep
+    // deep-links correctly; fall back to an unrestricted query if none come back.
+    let hits = await googleSearch(q, "en");
+    if (hits.length === 0) hits = await googleSearch(q);
+    candidates.push(...hits);
   } catch {
     /* try open library */
   }
@@ -341,8 +358,14 @@ export async function verifyBook(
     /\b(box(ed)? set|omnibus|collection set|complete (series|collection|novels)|\d+\s*books?\s*(collection|set|box))\b/i.test(
       t
     );
+  // Prefer an English-language edition so the ISBN we capture (used for Amazon /
+  // Goodreads deep links) points at the English-market book, not a translation.
+  const isEnglish = (b: Book) =>
+    b.language ? b.language.toLowerCase().startsWith("en") : isEnglishIsbn(b.isbn);
   const strong = candidates.filter((b) => isStrongMatch(title, author, b.title, b.author));
-  const match = strong.find((b) => !isBoxSet(b.title)) || strong[0];
+  const clean = strong.filter((b) => !isBoxSet(b.title));
+  const match =
+    clean.find(isEnglish) || clean[0] || strong.find(isEnglish) || strong[0];
   if (!match) return null;
   if (cutoffYear && match.year && match.year < cutoffYear) return null;
   return match;

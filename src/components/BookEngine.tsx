@@ -619,6 +619,7 @@ export default function BookEngine() {
               author: rec.author,
               year: rec.year,
               coverUrl: rec.coverUrl,
+              isbn: rec.isbn ?? null,
               amazonUrl: rec.amazonUrl,
               goodreadsUrl: rec.goodreadsUrl,
               lists: rec.lists,

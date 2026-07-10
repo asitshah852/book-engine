@@ -135,6 +135,40 @@ export async function findOrCreateAccount(name: string): Promise<Account> {
   return account;
 }
 
+export interface OperatorUser {
+  name: string;
+  createdAt: number;
+  /** Most recent shelf / reading-list write, or null if they never saved. */
+  lastActive: number | null;
+  shelfCount: number;
+  wishlistCount: number;
+}
+
+/** Operator view: every account that has ever signed in, with light activity. */
+export async function getOperatorStats(): Promise<{
+  totalUsers: number;
+  users: OperatorUser[];
+}> {
+  const store = await readStore();
+  const users: OperatorUser[] = store.accounts
+    .map((a) => {
+      const shelf = store.shelves[a.id];
+      const wish = store.wishlists[a.id];
+      const times = [shelf?.updatedAt, wish?.updatedAt].filter(
+        (t): t is number => typeof t === "number"
+      );
+      return {
+        name: a.name,
+        createdAt: a.createdAt,
+        lastActive: times.length ? Math.max(...times) : null,
+        shelfCount: shelf?.books.length || 0,
+        wishlistCount: wish?.items.length || 0,
+      };
+    })
+    .sort((x, y) => y.createdAt - x.createdAt);
+  return { totalUsers: users.length, users };
+}
+
 export async function getAccount(id: string): Promise<Account | null> {
   const store = await readStore();
   return store.accounts.find((a) => a.id === id) || null;

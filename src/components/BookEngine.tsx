@@ -91,6 +91,8 @@ const MOOD_CHIPS = [
   "Thought-provoking",
   "Page-turner",
   "Literary",
+  "Tear-jerker",
+  "Investing & stock picking",
 ];
 
 // Suggested taste tags the reader can add to their profile (beyond the inferred set).

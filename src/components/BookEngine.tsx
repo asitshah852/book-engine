@@ -1065,7 +1065,7 @@ export default function BookEngine() {
                 {(profileName || "?").trim().charAt(0).toUpperCase()}
               </div>
               <span>
-                Shelf saved for <strong style={{ color: "oklch(25% 0 0)" }}>{profileName}</strong>
+                <strong style={{ color: "oklch(25% 0 0)" }}>{profileName}</strong>&rsquo;s bookshelf
               </span>
               <span onClick={signOut} style={{ cursor: "pointer", color: "oklch(55% 0 0)", textDecoration: "underline" }}>
                 sign out
@@ -1127,7 +1127,7 @@ export default function BookEngine() {
                 cursor: "pointer",
               }}
             >
-              Save my shelf — just a name
+              Sign in to save your data. No password needed
             </button>
           )}
         </div>
@@ -1411,7 +1411,7 @@ export default function BookEngine() {
                     letterSpacing: ".04em",
                   }}
                 >
-                  Your books
+                  {profileName ? `${profileName}’s bookshelf` : "Your books"}
                 </div>
                 {books.length > 0 && (
                   <span style={{ display: "inline-flex", gap: 12 }}>

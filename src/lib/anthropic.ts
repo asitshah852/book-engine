@@ -20,7 +20,14 @@ function firstText(message: Anthropic.Message): string {
   return "";
 }
 
-/** Pull the first JSON array out of a model response, tolerating fences/prose. */
+/**
+ * Pull the first JSON array out of a model response, tolerating fences/prose —
+ * and, crucially, tolerating a *truncated* array (e.g. the response ran into the
+ * max_tokens limit mid-way). We first try a clean parse; if that fails we scan
+ * for complete top-level `{…}` objects and return those, dropping any trailing
+ * partial object. This turns an all-or-nothing hard failure into "use whatever
+ * fully-formed items we got".
+ */
 function extractJsonArray(text: string): any[] {
   let cleaned = text.trim();
   cleaned = cleaned
@@ -29,11 +36,51 @@ function extractJsonArray(text: string): any[] {
     .replace(/```$/, "")
     .trim();
   const start = cleaned.indexOf("[");
-  const end = cleaned.lastIndexOf("]");
-  if (start === -1 || end === -1 || end < start) throw new Error("no JSON array");
-  const arr = JSON.parse(cleaned.slice(start, end + 1));
-  if (!Array.isArray(arr)) throw new Error("not an array");
-  return arr;
+  if (start === -1) throw new Error("no JSON array");
+  const body = cleaned.slice(start);
+
+  const end = body.lastIndexOf("]");
+  if (end !== -1) {
+    try {
+      const arr = JSON.parse(body.slice(0, end + 1));
+      if (Array.isArray(arr)) return arr;
+    } catch {
+      /* fall through to object-by-object recovery */
+    }
+  }
+
+  // Recovery: walk the string and collect each balanced top-level object.
+  const objs: any[] = [];
+  let depth = 0;
+  let inStr = false;
+  let esc = false;
+  let objStart = -1;
+  for (let i = 0; i < body.length; i++) {
+    const ch = body[i];
+    if (inStr) {
+      if (esc) esc = false;
+      else if (ch === "\\") esc = true;
+      else if (ch === '"') inStr = false;
+      continue;
+    }
+    if (ch === '"') inStr = true;
+    else if (ch === "{") {
+      if (depth === 0) objStart = i;
+      depth++;
+    } else if (ch === "}") {
+      depth--;
+      if (depth === 0 && objStart >= 0) {
+        try {
+          objs.push(JSON.parse(body.slice(objStart, i + 1)));
+        } catch {
+          /* skip a malformed object */
+        }
+        objStart = -1;
+      }
+    }
+  }
+  if (objs.length) return objs;
+  throw new Error("no JSON array");
 }
 
 /**
@@ -169,7 +216,7 @@ export async function generateCandidates(
 
   const message = await getClient().messages.create({
     model: ANTHROPIC_MODEL,
-    max_tokens: 2048,
+    max_tokens: 4096, // 10 rich bookseller notes can overflow a smaller budget
     system:
       "You are a precise book recommendation engine. You only output valid JSON when asked to.",
     messages: [{ role: "user", content: prompt }],

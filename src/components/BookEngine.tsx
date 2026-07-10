@@ -361,7 +361,7 @@ export default function BookEngine() {
       const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`);
       const data = await res.json();
       if (seq !== searchSeq.current) return; // stale
-      setSearchResults((data.results || []).slice(0, 5));
+      setSearchResults((data.results || []).slice(0, 6));
     } catch {
       if (seq !== searchSeq.current) return;
       setSearchResults([]);
@@ -377,8 +377,8 @@ export default function BookEngine() {
     setSearching(false);
     if (searchTimer.current) clearTimeout(searchTimer.current);
     const trimmed = q.trim();
-    if (trimmed.length < 3) return;
-    searchTimer.current = setTimeout(() => runSearch(trimmed), 450);
+    if (trimmed.length < 2) return;
+    searchTimer.current = setTimeout(() => runSearch(trimmed), 320);
   };
 
   const addBookFromMatch = (match: Book) => {
@@ -961,7 +961,7 @@ export default function BookEngine() {
   const validCount = books.filter((b) => b.title && b.title.trim() && !b.needsTitle).length;
   const continueDisabled = validCount < 5;
   const trimmedQuery = query.trim();
-  const showSearchPanel = trimmedQuery.length >= 3 && (searching || searchResults !== null);
+  const showSearchPanel = trimmedQuery.length >= 2 && (searching || searchResults !== null);
   const hasSearchResults = showSearchPanel && !searching && !!searchResults && searchResults.length > 0;
   const noMatches = showSearchPanel && !searching && !!searchResults && searchResults.length === 0;
   const inputBookCount = books.filter((b) => !b.needsTitle && b.title).length;

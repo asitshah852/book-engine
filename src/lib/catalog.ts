@@ -190,19 +190,121 @@ async function itunesCover(title: string, author: string): Promise<string | null
 
 // ── Public API ───────────────────────────────────────────────────────────────
 
-/** Free-text catalog search. Google Books first, Open Library on failure/empty. */
-export async function searchBooks(query: string): Promise<Book[]> {
-  try {
-    const g = await googleSearch(query);
-    if (g.length > 0) return g.slice(0, 5);
-  } catch {
-    /* fall through to Open Library */
+/** Surname (last token) of an author name, normalised. */
+function surname(name: string): string {
+  return norm(name).split(" ").filter(Boolean).pop() || "";
+}
+
+// Third-party study aids — summaries, workbooks, study guides, "key takeaways",
+// etc. — clutter catalog search for popular books and are never what a reader
+// means when they type a title. Detect them by tell-tale title phrases and by
+// the handful of presses that mass-produce them, so we can drop them.
+const AID_TITLE_RE =
+  /\b(summary|summaries|study guide|studyguide|workbook|sparknotes|cliffs?\s?notes|instaread|macat|quicklet|brief read|key takeaways|conversation starters|reading group guide|study companion|unofficial (guide|companion)|analysis of|review and analysis|trivia (quiz|book)|sidekick)\b/i;
+const AID_AUTHOR_RE =
+  /(instaread|macat|supersummary|super summary|irb media|book tigers|bookrags|quickread|quick read|milkyway media|summareads|readtrepreneur|everest media|sabi shepherd|zip reads|ant hive media|knowledge tree|save time summaries)/i;
+
+function isStudyAid(b: Book): boolean {
+  return AID_TITLE_RE.test(b.title || "") || AID_AUTHOR_RE.test(b.author || "");
+}
+
+/** De-duplicate a merged book list by normalised title + author surname,
+ *  keeping the first (higher-ranked) occurrence. */
+export function dedupeBooks(books: Book[]): Book[] {
+  const seen = new Set<string>();
+  const out: Book[] = [];
+  for (const b of books) {
+    const key = norm(b.title) + "|" + surname(b.author);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(b);
   }
-  try {
-    return (await openLibrarySearch({ q: query })).slice(0, 5);
-  } catch {
-    return [];
+  return out;
+}
+
+/**
+ * How well a catalog result matches what the reader typed. Rewards title-word
+ * coverage (forgiving of partial / out-of-order words), exact and prefix hits,
+ * author-name matches (so typing just an author works), and popularity (so the
+ * famous edition wins over an obscure reprint). Higher is better; ~55+ is a
+ * confident match. Exported so the search route can tell a strong hit from a
+ * weak one and decide whether to invoke the typo-rescue.
+ */
+export function relevanceScore(query: string, b: Book): number {
+  const qNorm = norm(query);
+  const qWords = significantWords(query);
+  const t = norm(b.title);
+  const a = norm(b.author);
+  let score = 0;
+
+  if (qWords.length) {
+    const titleHits = qWords.filter((w) => t.includes(w)).length;
+    score += (titleHits / qWords.length) * 100;
+    const authorHits = qWords.filter((w) => a.includes(w)).length;
+    score += (authorHits / qWords.length) * 45;
+  } else if (qNorm && t.includes(qNorm)) {
+    score += 60;
   }
+
+  if (t === qNorm) score += 60;
+  else if (t.startsWith(qNorm)) score += 30;
+  else if (qNorm && t.includes(qNorm)) score += 15;
+
+  if (b.coverUrl) score += 8;
+  score += Math.min(30, Math.log10((b.ratingsCount || 0) + 1) * 10); // popularity
+  if (b.year) score += 2;
+
+  // "<Title> by <Author>" in the title itself is the hallmark of a summary /
+  // guide edition (real books don't name their author in the title). Penalise
+  // it — a genuine "Death by ..." title still wins on exact-match + popularity.
+  if (/\bby\s+[a-z]/i.test(b.title || "")) score -= 30;
+  return score;
+}
+
+/** Best relevance score across a result set (0 if empty). */
+export function topRelevance(query: string, books: Book[]): number {
+  return books.reduce((m, b) => Math.max(m, relevanceScore(query, b)), 0);
+}
+
+/**
+ * Free-text catalog search. Queries Google Books and Open Library together and
+ * merges them, then ranks by relevance + popularity so the edition the reader
+ * most likely means comes first — tolerant of partial titles, out-of-order
+ * words, and just-an-author searches. (Misspellings that still return junk are
+ * handled a layer up by the LLM typo-rescue in the search route.)
+ */
+export async function searchBooks(
+  query: string,
+  preferAuthor?: string
+): Promise<Book[]> {
+  const [g, o] = await Promise.all([
+    googleSearch(query).catch(() => [] as Book[]),
+    openLibrarySearch({ q: query }).catch(() => [] as Book[]),
+  ]);
+
+  // When we know the intended author (from the typo-rescue), editions actually
+  // written by them decisively beat critic-authored studies of the same title.
+  const wantAuthor = surname(preferAuthor || "");
+
+  const merged = dedupeBooks([...g, ...o]);
+  // Combine our relevance score with the catalog's own ordering: Google / Open
+  // Library already surface the canonical, popular edition near the top, which
+  // rescues ranking when rating counts are missing. Earlier = a bigger nudge.
+  const combined = new Map<Book, number>();
+  merged.forEach((b, i) =>
+    combined.set(
+      b,
+      relevanceScore(query, b) +
+        Math.max(0, 16 - i * 2) +
+        (wantAuthor && surname(b.author) === wantAuthor ? 90 : 0)
+    )
+  );
+  // Drop third-party study aids when real editions exist (keep them only as a
+  // last resort so a search never comes back empty).
+  const real = merged.filter((b) => !isStudyAid(b));
+  const pool = real.length ? real : merged;
+  pool.sort((a, b) => (combined.get(b) || 0) - (combined.get(a) || 0));
+  return pool.slice(0, 7);
 }
 
 /**

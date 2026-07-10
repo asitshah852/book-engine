@@ -77,20 +77,26 @@ export async function identifyBookFromImage(
  * match, ask what real, published book the reader most likely meant. Returns a
  * plain "Title Author" string to re-query the catalog, or null.
  */
-export async function rescueSearch(query: string): Promise<string | null> {
+export async function rescueSearch(
+  query: string
+): Promise<{ title: string; author: string } | null> {
   const message = await getClient().messages.create({
     model: ANTHROPIC_MODEL,
     max_tokens: 60,
     messages: [
       {
         role: "user",
-        content: `A reader searched a book catalog for: "${query}". This may be misspelled, inexact, or a description of a book. What real, published book did they most likely mean? Respond with ONLY "Title Author" as a plain search string (no quotes, no commentary). If you have no confident guess, respond exactly "UNKNOWN".`,
+        content: `A reader is searching a book catalog and typed: "${query}". This is very likely a real book they're struggling to spell or remember exactly — it may be misspelled, only part of the title, the title with words missing or out of order, a phonetic guess, just the author's name, or a loose description. Infer the single most likely real, published, reasonably well-known book they mean. Respond with ONLY "Title — Author" (an em dash between title and author, no quotes, no commentary). Only answer "UNKNOWN" if you truly cannot make a plausible guess.`,
       },
     ],
   });
   const g = firstText(message).trim();
   if (!g || g.toUpperCase().includes("UNKNOWN")) return null;
-  return g;
+  const parts = g.split(/\s+[—–-]\s+/);
+  const title = (parts[0] || g).trim();
+  const author = (parts[1] || "").trim();
+  if (!title) return null;
+  return { title, author };
 }
 
 interface CandidateOptions {

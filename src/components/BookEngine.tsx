@@ -165,6 +165,8 @@ export default function BookEngine() {
   const [cameraOpen, setCameraOpen] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [identifying, setIdentifying] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [importNote, setImportNote] = useState<string | null>(null);
   const [pasteArmed, setPasteArmed] = useState(false);
   const [refreshingCovers, setRefreshingCovers] = useState(false);
   const [profileName, setProfileName] = useState<string | null>(null);
@@ -788,16 +790,157 @@ export default function BookEngine() {
     fileRef.current?.click();
   };
 
+  // ── Spreadsheet / list import ───────────────────────────────────────────
+  // Delimited (CSV/TSV) parser that respects quoted fields.
+  const parseDelimited = (text: string): string[][] => {
+    const firstLine = text.split(/\r?\n/, 1)[0] || "";
+    const delim = firstLine.includes("\t") ? "\t" : ",";
+    const rows: string[][] = [];
+    let row: string[] = [];
+    let cur = "";
+    let inQ = false;
+    for (let i = 0; i < text.length; i++) {
+      const c = text[i];
+      if (inQ) {
+        if (c === '"') {
+          if (text[i + 1] === '"') { cur += '"'; i++; } else inQ = false;
+        } else cur += c;
+      } else if (c === '"') inQ = true;
+      else if (c === delim) { row.push(cur); cur = ""; }
+      else if (c === "\n") { row.push(cur); rows.push(row); row = []; cur = ""; }
+      else if (c === "\r") { /* skip */ }
+      else cur += c;
+    }
+    if (cur.length || row.length) { row.push(cur); rows.push(row); }
+    return rows;
+  };
+
+  // Turn a grid of cells into {title, author} rows — detects a header row and
+  // title/author columns, and falls back to "Title by Author" in one column.
+  const parseBookRows = (grid: unknown[][]): { title: string; author: string }[] => {
+    const clean = (grid || []).map((r) =>
+      Array.isArray(r) ? r.map((c) => (c == null ? "" : String(c).trim())) : []
+    );
+    if (!clean.length) return [];
+    const first = clean[0] || [];
+    const lower = first.map((c) => c.toLowerCase());
+    const findCol = (keys: string[]) =>
+      lower.findIndex((c) => keys.some((k) => c === k || c.includes(k)));
+    const tIdx = findCol(["title", "book", "name"]);
+    const aIdx = findCol(["author", "writer"]);
+    let titleCol = 0;
+    let authorCol = first.length > 1 ? 1 : -1;
+    let start = 0;
+    if (tIdx !== -1 || aIdx !== -1) {
+      titleCol = tIdx !== -1 ? tIdx : 0;
+      authorCol = aIdx;
+      start = 1;
+    }
+    const out: { title: string; author: string }[] = [];
+    for (let i = start; i < clean.length; i++) {
+      const r = clean[i];
+      if (!r || !r.length) continue;
+      let title = (r[titleCol] || "").trim();
+      let author = authorCol >= 0 ? (r[authorCol] || "").trim() : "";
+      if (!title) title = (r[0] || "").trim();
+      // Single-column lists often read "Title by Author" / "Title - Author".
+      if (!author && authorCol < 0) {
+        const m = title.match(/^(.+?)\s+(?:by|-|—|–)\s+(.+)$/i);
+        if (m && m[1] && m[2]) { title = m[1].trim(); author = m[2].trim(); }
+      }
+      if (title) out.push({ title, author });
+    }
+    return out;
+  };
+
+  const processBookListFile = async (file: File) => {
+    setCameraError(null);
+    setImportNote(null);
+    setImporting(true);
+    try {
+      let grid: unknown[][] = [];
+      const name = file.name.toLowerCase();
+      const isText =
+        /\.(csv|tsv|txt)$/.test(name) ||
+        file.type === "text/csv" ||
+        file.type === "text/plain";
+      if (isText) {
+        grid = parseDelimited(await file.text());
+      } else {
+        const XLSX = await import("xlsx");
+        const wb = XLSX.read(await file.arrayBuffer(), { type: "array" });
+        const sheet = wb.Sheets[wb.SheetNames[0]];
+        grid = XLSX.utils.sheet_to_json(sheet, {
+          header: 1,
+          blankrows: false,
+          defval: "",
+        }) as unknown[][];
+      }
+      const parsed = parseBookRows(grid);
+      if (!parsed.length) {
+        setCameraError(
+          "Couldn't find any titles in that file — make sure one column holds the book titles."
+        );
+        return;
+      }
+      const seen = new Set<string>();
+      const toAdd: ShelfBook[] = [];
+      for (const p of parsed) {
+        const key = p.title.toLowerCase();
+        if (seen.has(key)) continue;
+        seen.add(key);
+        if (isDuplicate(p.title)) continue;
+        toAdd.push({
+          id: newId(),
+          title: p.title,
+          author: p.author,
+          year: null,
+          photo: null,
+          needsTitle: false,
+        });
+      }
+      if (!toAdd.length) {
+        setImportNote("Those titles are already on your shelf.");
+        return;
+      }
+      const capped = toAdd.slice(0, 200);
+      setBooks((s) => [...capped, ...s]);
+      const n = capped.length;
+      setImportNote(`Added ${n} book${n > 1 ? "s" : ""} from ${file.name} — fetching covers…`);
+      await backfillCovers(capped);
+      setImportNote(`Added ${n} book${n > 1 ? "s" : ""} from ${file.name}.`);
+    } catch {
+      setCameraError(
+        "Couldn't read that file. Use a .csv or .xlsx with a column of book titles (an Author column is optional)."
+      );
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  // Route a dropped / chosen file: a cover image goes to the photo flow; a
+  // spreadsheet / CSV goes to the list importer.
+  const routeFile = (file: File | null | undefined) => {
+    if (!file) return;
+    const name = file.name.toLowerCase();
+    const isList =
+      /\.(csv|tsv|txt|xlsx|xls|ods)$/.test(name) ||
+      /csv|excel|spreadsheet|officedocument\.spreadsheet|text\/plain/.test(file.type);
+    const isImage = file.type.startsWith("image/") || /\.(png|jpe?g|gif|webp|heic|bmp)$/.test(name);
+    if (isList && !isImage) processBookListFile(file);
+    else processImageFile(file);
+  };
+
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = "";
-    processImageFile(file);
+    routeFile(file);
   };
 
   const handleDragOver = (e: React.DragEvent) => e.preventDefault();
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
-    processImageFile(e.dataTransfer?.files?.[0]);
+    routeFile(e.dataTransfer?.files?.[0]);
   };
 
   // ── Camera ────────────────────────────────────────────────────────────
@@ -1337,14 +1480,20 @@ export default function BookEngine() {
                 ) : (
                   <>
                     <ClipboardIcon />
-                    <div style={{ fontSize: 12.5, fontWeight: 500, lineHeight: 1.3 }}>Paste or drop a cover</div>
+                    <div style={{ fontSize: 12.5, fontWeight: 500, lineHeight: 1.3 }}>Drop a cover or a book list</div>
                     <div onClick={triggerUpload} style={{ fontSize: 10.5, textDecoration: "underline", lineHeight: 1.3 }}>
-                      or browse files
+                      browse files (image, CSV, Excel)
                     </div>
                   </>
                 )}
               </div>
-              <input type="file" accept="image/*" ref={fileRef} onChange={handleFileUpload} style={{ display: "none" }} />
+              <input
+                type="file"
+                accept="image/*,.csv,.tsv,.txt,.xlsx,.xls,.ods,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
+                ref={fileRef}
+                onChange={handleFileUpload}
+                style={{ display: "none" }}
+              />
 
               {/* Search box — drops to its own full-width row on narrow screens */}
               <div
@@ -1453,6 +1602,34 @@ export default function BookEngine() {
 
             {cameraError && (
               <div style={{ fontSize: 13, color: "oklch(52% 0.18 25)", marginBottom: 16 }}>{cameraError}</div>
+            )}
+
+            {(importing || importNote) && (
+              <div
+                style={{
+                  fontSize: 13,
+                  color: "oklch(45% 0.09 150)",
+                  marginBottom: 16,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                }}
+              >
+                {importing && (
+                  <span
+                    style={{
+                      width: 13,
+                      height: 13,
+                      border: "2px solid oklch(80% 0.05 150)",
+                      borderTopColor: "oklch(45% 0.13 150)",
+                      borderRadius: "50%",
+                      display: "inline-block",
+                      animation: "bre-spin .7s linear infinite",
+                    }}
+                  />
+                )}
+                {importNote || "Reading your list…"}
+              </div>
             )}
 
             {/* Shelf header */}

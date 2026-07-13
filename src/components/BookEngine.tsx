@@ -717,7 +717,7 @@ export default function BookEngine() {
           books: [...shelf, ...likedExtras],
           recency,
           steer,
-          exclude: [...dismissedTitles, ...Array.from(seenRef.current), ...shownTitles],
+          exclude: [...dismissedTitles, ...wishlist.map((w) => w.title), ...Array.from(seenRef.current), ...shownTitles],
           ...prefs(),
         }),
       });
@@ -761,7 +761,7 @@ export default function BookEngine() {
         body: JSON.stringify({
           books: [...shelf, ...likedExtras],
           recency,
-          exclude: [...dismissedTitles, ...Array.from(seenRef.current)],
+          exclude: [...dismissedTitles, ...wishlist.map((w) => w.title), ...Array.from(seenRef.current)],
           ...prefs(),
         }),
       });
@@ -923,7 +923,7 @@ export default function BookEngine() {
           steer,
           // Never re-suggest a dismissed book, or anything already shown this
           // session — so each run brings genuinely new titles.
-          exclude: [...dismissedTitles, ...Array.from(seenRef.current)],
+          exclude: [...dismissedTitles, ...wishlist.map((w) => w.title), ...Array.from(seenRef.current)],
           ...prefs(),
         }),
       });
@@ -987,6 +987,9 @@ export default function BookEngine() {
     profileTags,
     // Soft novelty: books shown on past visits — bias toward fresh picks.
     shownBefore: shownHistory,
+    // Reading-list books are an interest signal — feed them into the taste read
+    // (they're also excluded from results, below, so they're never suggested).
+    interested: wishlist.map((w) => (w.author ? `${w.title} by ${w.author}` : w.title)),
   });
 
   const restart = () => {

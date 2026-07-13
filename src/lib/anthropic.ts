@@ -168,6 +168,9 @@ interface CandidateOptions {
   adventurousness?: "safe" | "balanced" | "surprise";
   /** Confirmed taste-profile tags from the preview step. */
   profileTags?: string[];
+  /** "Title by Author" of books on the reader's reading list — an interest
+   *  signal (drawn to, not yet read). Informs taste; never recommended back. */
+  interested?: string[];
 }
 
 /**
@@ -192,6 +195,12 @@ export async function generateCandidates(
   let profile = "";
   if (opts.profileTags && opts.profileTags.length) {
     profile = `\n\nThe reader confirms their taste includes: ${opts.profileTags.join(", ")}. Lean into these.`;
+  }
+
+  let interested = "";
+  const interestedList = Array.from(new Set(opts.interested || [])).filter(Boolean);
+  if (interestedList.length) {
+    interested = `\n\nThe reader has also saved these to their reading list — books that have already caught their interest but which they have NOT read yet: ${interestedList.join("; ")}. Treat these as an additional strong signal of the direction their taste is pulling right now, and let them inform your picks. Do NOT recommend any of these back (they already have them).`;
   }
 
   let mood = "";
@@ -246,7 +255,7 @@ export async function generateCandidates(
   const variety =
     "\n\nEnsure variety across the 10: do NOT include more than one book by the same author, and vary sub-genre, era, and tone.";
 
-  const prompt = `A reader has enjoyed these books: ${opts.inputList}.\n\n${opts.recencyText}${profile}${mood}${adventure}${novelty}${discovery}${steer}${avoid}${variety}\n\nRecommend exactly 10 different real, published books they have not already mentioned that they would likely enjoy next, matching their taste, best matches first. Only recommend well-known books you are certain really exist.\n\nQuality bar: strongly prefer acclaimed, award-recognized books — winners or shortlisted/finalist titles for major literary prizes (the Booker Prize, International Booker, Pulitzer Prize, National Book Award, National Book Critics Circle Award, Women's Prize for Fiction, Costa/Whitbread, and — for science fiction & fantasy — the Hugo and Nebula Awards; for non-fiction, the Financial Times Business Book of the Year, the Baillie Gifford / Samuel Johnson Prize, and the Pulitzer Prizes for History, Biography, and General Non-fiction; and for sport, the William Hill Sports Book of the Year), books by Nobel Literature laureates, and books featured on major editorial reading lists (New York Times Notable / Best Books of the Year, Financial Times Best Books of the Year, The Economist Books of the Year) — and books that are widely well-rated by readers (roughly a 4+ average on Goodreads). Avoid obscure or poorly reviewed titles.\n\nFor each, write a short recommendation note in the warm, knowledgeable, slightly personal voice of an independent bookseller — in the spirit of Heywood Hill's handwritten shelf notes. Make it characterful and specific (not generic praise), and name one of their own books where it fits naturally.\n\nRespond with ONLY a valid JSON array (no markdown fences, no commentary) of exactly 10 objects, each with keys: "title" (string), "author" (string), "year" (number, best-known original publication year), "why" (string, a bookseller's note in second person "you", max 240 characters), "lists" (array of strings, subset of ["NYT","FT","Economist"] — ONLY lists you are confident actually featured this book; empty array if none or unsure).`;
+  const prompt = `A reader has enjoyed these books: ${opts.inputList}.\n\n${opts.recencyText}${profile}${interested}${mood}${adventure}${novelty}${discovery}${steer}${avoid}${variety}\n\nRecommend exactly 10 different real, published books they have not already mentioned that they would likely enjoy next, matching their taste, best matches first. Only recommend well-known books you are certain really exist.\n\nQuality bar: strongly prefer acclaimed, award-recognized books — winners or shortlisted/finalist titles for major literary prizes (the Booker Prize, International Booker, Pulitzer Prize, National Book Award, National Book Critics Circle Award, Women's Prize for Fiction, Costa/Whitbread, and — for science fiction & fantasy — the Hugo and Nebula Awards; for non-fiction, the Financial Times Business Book of the Year, the Baillie Gifford / Samuel Johnson Prize, and the Pulitzer Prizes for History, Biography, and General Non-fiction; and for sport, the William Hill Sports Book of the Year), books by Nobel Literature laureates, and books featured on major editorial reading lists (New York Times Notable / Best Books of the Year, Financial Times Best Books of the Year, The Economist Books of the Year) — and books that are widely well-rated by readers (roughly a 4+ average on Goodreads). Avoid obscure or poorly reviewed titles.\n\nFor each, write a short recommendation note in the warm, knowledgeable, slightly personal voice of an independent bookseller — in the spirit of Heywood Hill's handwritten shelf notes. Make it characterful and specific (not generic praise), and name one of their own books where it fits naturally.\n\nRespond with ONLY a valid JSON array (no markdown fences, no commentary) of exactly 10 objects, each with keys: "title" (string), "author" (string), "year" (number, best-known original publication year), "why" (string, a bookseller's note in second person "you", max 240 characters), "lists" (array of strings, subset of ["NYT","FT","Economist"] — ONLY lists you are confident actually featured this book; empty array if none or unsure).`;
 
   const message = await getClient().messages.create({
     model: ANTHROPIC_MODEL,

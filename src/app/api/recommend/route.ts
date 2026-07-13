@@ -58,6 +58,7 @@ interface RecommendBody {
   moodText?: string;
   adventurousness?: "safe" | "balanced" | "surprise";
   profileTags?: string[];
+  interested?: string[]; // reading-list books — taste signal, never recommended
 }
 
 const PRIZE_CODES = new Set([
@@ -210,6 +211,7 @@ export async function POST(request: Request) {
       moodText: body.moodText,
       adventurousness: body.adventurousness,
       profileTags: body.profileTags,
+      interested: body.interested,
     });
 
     // Enforce the recency cutoff on the model's own claimed year first.

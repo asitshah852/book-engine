@@ -107,3 +107,24 @@ input:focus,
 button:focus-visible {
   outline: none;
 }
+
+img {
+  max-width: 100%;
+}
+
+/* ── Mobile / iPhone ─────────────────────────────────────────────────────── */
+@media (max-width: 480px) {
+  /* iOS Safari zooms the page in when focusing an input whose font is < 16px.
+     Force 16px on all text entry to keep the layout put. */
+  input,
+  textarea,
+  [contenteditable] {
+    font-size: 16px !important;
+  }
+
+  /* Step tracker: keep the numbered dots + connectors, but show only the
+     current step's name so four labels don't overflow a narrow screen. */
+  .bre-step-label:not(.bre-step-label-active) {
+    display: none;
+  }
+}

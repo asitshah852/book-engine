@@ -1014,7 +1014,7 @@ export default function BookEngine() {
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
-        padding: "56px 24px 80px",
+        padding: "clamp(28px, 8vw, 56px) clamp(14px, 4vw, 24px) 80px",
       }}
     >
       <div style={{ width: "100%", maxWidth: 640 }}>
@@ -1024,6 +1024,7 @@ export default function BookEngine() {
             display: "flex",
             justifyContent: "flex-end",
             alignItems: "center",
+            flexWrap: "wrap",
             gap: 10,
             marginBottom: 18,
             minHeight: 30,
@@ -1167,6 +1168,7 @@ export default function BookEngine() {
                     {d.num}
                   </div>
                   <div
+                    className={active ? "bre-step-label bre-step-label-active" : "bre-step-label"}
                     style={{
                       fontSize: 13,
                       color: active ? "oklch(20% 0 0)" : "oklch(55% 0 0)",
@@ -1203,7 +1205,7 @@ export default function BookEngine() {
               sharper your recommendations.
             </p>
 
-            <div style={{ display: "flex", gap: 12, marginBottom: 20 }}>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginBottom: 20 }}>
               {/* Camera tile */}
               <div
                 onClick={openCamera}
@@ -1286,10 +1288,10 @@ export default function BookEngine() {
               </div>
               <input type="file" accept="image/*" ref={fileRef} onChange={handleFileUpload} style={{ display: "none" }} />
 
-              {/* Search box */}
+              {/* Search box — drops to its own full-width row on narrow screens */}
               <div
                 style={{
-                  flex: 1,
+                  flex: "1 1 240px",
                   position: "relative",
                   display: "flex",
                   flexDirection: "column",
@@ -2534,7 +2536,7 @@ export default function BookEngine() {
             alignItems: "flex-start",
             justifyContent: "center",
             zIndex: 60,
-            padding: "56px 24px",
+            padding: "clamp(20px, 7vw, 56px) clamp(14px, 4vw, 24px)",
             overflowY: "auto",
             animation: "bre-fade .2s ease",
           }}

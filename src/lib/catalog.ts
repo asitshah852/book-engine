@@ -221,6 +221,22 @@ function isStudyAid(b: Book): boolean {
   return AID_TITLE_RE.test(b.title || "") || AID_AUTHOR_RE.test(b.author || "");
 }
 
+// Bundles / omnibi / multi-book collections — never the clean single edition a
+// reader means (or wants a cover for).
+function isBoxSet(t: string): boolean {
+  return /\b(box(ed)? set|omnibus|collection set|complete (series|collection|novels)|\d+\s*[- ]?books?\s*(collection|set|box|bundle)|(e-?book|book)\s+collection|book bundle|two-book|three-book|\d+-book)\b/i.test(
+    t || ""
+  );
+}
+
+// The "core" title — subtitle after a colon / dash / bracket removed — so an
+// imported "Sapiens: A Brief History of Humankind" still matches catalog
+// entries titled simply "Sapiens".
+function coreTitle(title: string): string {
+  const cut = (title || "").split(/\s*[:–—(]\s*/)[0].trim();
+  return cut || title || "";
+}
+
 /** De-duplicate a merged book list by normalised title + author surname,
  *  keeping the first (higher-ranked) occurrence. */
 export function dedupeBooks(books: Book[]): Book[] {
@@ -353,11 +369,6 @@ export async function verifyBook(
     }
   }
 
-  // Prefer a clean single edition over box sets / omnibus / "3 Books Collection".
-  const isBoxSet = (t: string) =>
-    /\b(box(ed)? set|omnibus|collection set|complete (series|collection|novels)|\d+\s*books?\s*(collection|set|box))\b/i.test(
-      t
-    );
   // Prefer an English-language edition so the ISBN we capture (used for Amazon /
   // Goodreads deep links) points at the English-market book, not a translation.
   const isEnglish = (b: Book) =>
@@ -379,19 +390,38 @@ export async function fetchCover(
   title: string,
   author: string
 ): Promise<string | null> {
-  try {
-    const g = await googleSearch(
-      author ? `intitle:${title} inauthor:${author}` : `intitle:${title}`
-    );
-    const m = g.find(
-      (b) => b.coverUrl && isStrongMatch(title, author, b.title, b.author)
-    );
-    if (m?.coverUrl) return m.coverUrl;
-  } catch {
-    /* try itunes */
+  // Try the full title, then the subtitle-stripped "core" title (so an imported
+  // "Sapiens: A Brief History of Humankind" still finds the "Sapiens" cover),
+  // across Google Books then Open Library (which carries covers Google lacks).
+  const core = coreTitle(title);
+  const titleTries =
+    norm(core) && norm(core) !== norm(title) ? [title, core] : [title];
+
+  const pick = (books: Book[], t: string): string | null =>
+    books.find(
+      (b) => b.coverUrl && !isBoxSet(b.title) && isStrongMatch(t, author, b.title, b.author)
+    )?.coverUrl || null;
+
+  for (const t of titleTries) {
+    try {
+      const g = await googleSearch(
+        author ? `intitle:${t} inauthor:${author}` : `intitle:${t}`
+      );
+      const c = pick(g, t);
+      if (c) return c;
+    } catch {
+      /* try open library */
+    }
+    try {
+      const o = await openLibrarySearch(author ? { title: t, author } : { title: t });
+      const c = pick(o, t);
+      if (c) return c;
+    } catch {
+      /* next title / itunes */
+    }
   }
   try {
-    return await itunesCover(title, author);
+    return await itunesCover(core, author);
   } catch {
     return null;
   }

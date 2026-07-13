@@ -172,6 +172,9 @@ export default function BookEngine() {
   const [showNamePrompt, setShowNamePrompt] = useState(false);
   const [addedTitles, setAddedTitles] = useState<string[]>([]);
   const [dismissedTitles, setDismissedTitles] = useState<string[]>([]);
+  // Books recommended on PAST visits (persisted per account) — a soft novelty
+  // signal so each login surfaces mostly-fresh picks.
+  const [shownHistory, setShownHistory] = useState<string[]>([]);
   const [likedTitles, setLikedTitles] = useState<string[]>([]);
   const [loadingMore, setLoadingMore] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -206,6 +209,8 @@ export default function BookEngine() {
   const lastPersistedWish = useRef<WishlistItem[] | null>(null);
   const persistDismissTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastPersistedDismiss = useRef<string[] | null>(null);
+  const persistShownTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastPersistedShown = useRef<string[] | null>(null);
   // Every recommendation title shown this session — excluded from future picks
   // so refreshing / "show me more" never repeats the same books.
   const seenRef = useRef<Set<string>>(new Set());
@@ -270,6 +275,11 @@ export default function BookEngine() {
           const dis: string[] = Array.isArray(data.dismissed) ? data.dismissed : [];
           lastPersistedDismiss.current = dis;
           setDismissedTitles(dis);
+          // Soft novelty only — do NOT add to seenRef (the hard exclude), so a
+          // great past pick can still occasionally resurface.
+          const shownPrev: string[] = Array.isArray(data.shown) ? data.shown : [];
+          lastPersistedShown.current = shownPrev;
+          setShownHistory(shownPrev);
         }
       } catch {
         /* signed out — fall through to the local guest shelf */
@@ -354,6 +364,21 @@ export default function BookEngine() {
       }).catch(() => {});
     }, 500);
   }, [dismissedTitles, profileName]);
+
+  // Persist the cross-session shown-history server-side — signed-in accounts only.
+  useEffect(() => {
+    if (!hydratedRef.current || !profileName) return;
+    if (shownHistory === lastPersistedShown.current) return;
+    lastPersistedShown.current = shownHistory;
+    if (persistShownTimer.current) clearTimeout(persistShownTimer.current);
+    persistShownTimer.current = setTimeout(() => {
+      fetch("/api/shown", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ titles: shownHistory }),
+      }).catch(() => {});
+    }, 800);
+  }, [shownHistory, profileName]);
 
   // ── Search ──────────────────────────────────────────────────────────────
   const runSearch = useCallback(async (q: string) => {
@@ -651,6 +676,28 @@ export default function BookEngine() {
     for (const r of recs) seenRef.current.add((r.title || "").toLowerCase());
   };
 
+  // Append shown titles to the account's cross-session history (persisted) so
+  // future logins lean toward fresh picks. Kept to the most recent ~300.
+  const recordShown = (recs: Recommendation[]) => {
+    if (!profileName) return; // only meaningful for a saved account
+    const titles = recs.map((r) => r.title).filter(Boolean);
+    if (!titles.length) return;
+    setShownHistory((prev) => {
+      const combined = [...prev, ...titles];
+      const seen = new Set<string>();
+      const out: string[] = [];
+      // Walk newest→oldest, keeping the most recent occurrence of each title.
+      for (let i = combined.length - 1; i >= 0; i--) {
+        const t = combined[i];
+        const k = (t || "").toLowerCase();
+        if (!t || seen.has(k)) continue;
+        seen.add(k);
+        out.unshift(t);
+      }
+      return out.slice(-300);
+    });
+  };
+
   // Fetch more picks and append them (no starting over). Excludes everything
   // already shown or thumbed-down; liked picks feed back in as extra taste.
   const loadMore = async (steer?: string) => {
@@ -681,6 +728,7 @@ export default function BookEngine() {
         );
       } else {
         recordSeen(data.results as Recommendation[]);
+        recordShown(data.results as Recommendation[]);
         setResults((rs) => {
           const seen = new Set(rs.map((r) => r.title.toLowerCase()));
           const fresh = (data.results as Recommendation[]).filter(
@@ -724,6 +772,7 @@ export default function BookEngine() {
         );
       } else {
         recordSeen(data.results as Recommendation[]);
+        recordShown(data.results as Recommendation[]);
         setResults(data.results);
         if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
       }
@@ -829,6 +878,9 @@ export default function BookEngine() {
         const dis: string[] = Array.isArray(data.dismissed) ? data.dismissed : [];
         lastPersistedDismiss.current = dis;
         setDismissedTitles(dis);
+        const shownPrev: string[] = Array.isArray(data.shown) ? data.shown : [];
+        lastPersistedShown.current = shownPrev;
+        setShownHistory(shownPrev);
       }
     } catch {
       /* ignore */
@@ -882,6 +934,7 @@ export default function BookEngine() {
         return;
       }
       recordSeen(data.results);
+      recordShown(data.results);
       setResults(data.results);
       setStep(4);
     } catch {
@@ -932,6 +985,8 @@ export default function BookEngine() {
     moodText: moodText.trim(),
     adventurousness,
     profileTags,
+    // Soft novelty: books shown on past visits — bias toward fresh picks.
+    shownBefore: shownHistory,
   });
 
   const restart = () => {

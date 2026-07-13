@@ -9,6 +9,7 @@ import {
   getDismissed,
   saveDismissed,
   mergeDismissed,
+  getShown,
 } from "@/lib/repo";
 import { sessionCookie } from "@/lib/session";
 import type { ShelfBook, WishlistItem } from "@/lib/types";
@@ -63,13 +64,14 @@ export async function POST(request: Request) {
     saveWishlist(account.id, mergedWish),
     saveDismissed(account.id, mergedDismissed),
   ]);
-  const [books, wishlist, dismissed] = await Promise.all([
+  const [books, wishlist, dismissed, shown] = await Promise.all([
     getShelf(account.id),
     getWishlist(account.id),
     getDismissed(account.id),
+    getShown(account.id),
   ]);
 
-  const res = NextResponse.json({ name: account.name, books, wishlist, dismissed });
+  const res = NextResponse.json({ name: account.name, books, wishlist, dismissed, shown });
   res.cookies.set(sessionCookie.create(account.id));
   return res;
 }

@@ -41,7 +41,13 @@ interface StoreShape {
   shelves: Record<string, StoredShelf>; // keyed by account id
   wishlists: Record<string, StoredWishlist>; // keyed by account id
   dismissed: Record<string, StoredDismissed>; // "not interested" titles, keyed by account id
+  shown: Record<string, StoredDismissed>; // titles surfaced before (cross-session novelty), keyed by account id
 }
+
+// How many past recommendations we remember per account for novelty. Old ones
+// age out so a long-time user's picks can eventually resurface (feels fresh, not
+// permanently forbidden).
+const SHOWN_HISTORY_CAP = 300;
 
 // Storage backend selection:
 //  • If UPSTASH_REDIS_REST_URL + _TOKEN are set (production on a serverless host
@@ -71,6 +77,7 @@ function normalize(parsed: unknown): StoreShape {
     shelves: p.shelves && typeof p.shelves === "object" ? p.shelves : {},
     wishlists: p.wishlists && typeof p.wishlists === "object" ? p.wishlists : {},
     dismissed: p.dismissed && typeof p.dismissed === "object" ? p.dismissed : {},
+    shown: p.shown && typeof p.shown === "object" ? p.shown : {},
   };
 }
 
@@ -261,4 +268,33 @@ export async function saveDismissed(
 export function mergeDismissed(a: string[], b: string[]): string[] {
   const seen = new Set(a.map((t) => t.toLowerCase()));
   return [...a, ...b.filter((t) => !seen.has(t.toLowerCase()))];
+}
+
+/** Titles this account has been shown before (across sessions), most-recent
+ *  last. Used as a soft novelty signal so re-logins feel fresh. */
+export async function getShown(accountId: string): Promise<string[]> {
+  const store = await readStore();
+  return store.shown[accountId]?.titles || [];
+}
+
+export async function saveShown(
+  accountId: string,
+  titles: string[]
+): Promise<void> {
+  const store = await readStore();
+  // De-dupe case-insensitively keeping the LAST occurrence (so a resurfaced book
+  // moves to the front of "recently shown"), then keep only the newest N.
+  const seen = new Set<string>();
+  const deduped: string[] = [];
+  for (let i = titles.length - 1; i >= 0; i--) {
+    const t = titles[i];
+    if (typeof t !== "string" || !t.trim()) continue;
+    const k = t.toLowerCase();
+    if (seen.has(k)) continue;
+    seen.add(k);
+    deduped.unshift(t);
+  }
+  const capped = deduped.slice(-SHOWN_HISTORY_CAP);
+  store.shown[accountId] = { titles: capped, updatedAt: Date.now() };
+  await writeStore(store);
 }

@@ -52,7 +52,8 @@ interface RecommendBody {
   books: ShelfBook[];
   recency: Recency;
   steer?: string;
-  exclude?: string[]; // already-shown titles
+  exclude?: string[]; // hard exclude: dismissed + already shown this session
+  shownBefore?: string[]; // soft novelty signal: shown on past visits
   mood?: string[];
   moodText?: string;
   adventurousness?: "safe" | "balanced" | "surprise";
@@ -204,6 +205,7 @@ export async function POST(request: Request) {
       recencyText,
       steerText: body.steer,
       exclude: body.exclude,
+      shownBefore: body.shownBefore,
       mood: body.mood,
       moodText: body.moodText,
       adventurousness: body.adventurousness,

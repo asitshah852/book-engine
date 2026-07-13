@@ -157,6 +157,9 @@ interface CandidateOptions {
   alreadyShown?: string[];
   /** Titles to explicitly avoid (already shown / owned / disliked). */
   exclude?: string[];
+  /** Titles shown on PAST visits — a soft novelty signal (strongly prefer fresh
+   *  picks, but the model may occasionally reintroduce a great past match). */
+  shownBefore?: string[];
   /** Mood/vibe chips the reader selected (e.g. "fast-paced", "cozy"). */
   mood?: string[];
   /** Free-text mood note (e.g. "set in Japan"). */
@@ -209,10 +212,41 @@ export async function generateCandidates(
       "\n\nBe adventurous: include several unexpected, horizon-broadening choices — excellent books in adjacent genres, styles, or traditions the reader may not have discovered — while still plausibly matching their taste.";
   }
 
+  // Cross-session novelty: strongly prefer books not surfaced on past visits,
+  // while allowing a rare re-introduction of a truly excellent past match — so
+  // re-logins feel fresh without permanently banning great books.
+  let novelty = "";
+  const excludeSet = new Set(excludeList.map((t) => t.toLowerCase()));
+  const softShown = Array.from(new Set(opts.shownBefore || []))
+    .filter((t) => t && !excludeSet.has(t.toLowerCase()))
+    .slice(-70);
+  if (softShown.length) {
+    novelty = `\n\nThe reader has been recommended these on previous visits: ${softShown.join("; ")}. Make this set feel FRESH — the clear majority must be books NOT in that list. You may reintroduce at most ONE of those previous titles, and only if it is an outstanding match.`;
+  }
+
+  // Rotating "discovery lens" + a random seed, so repeat visits with the same
+  // shelf still explore different corners of the reader's taste each time.
+  const LENSES = [
+    "reach past the obvious bestsellers to brilliant, under-the-radar books that deserve more readers",
+    "include some books from a different era or decade than most of their shelf",
+    "bring in acclaimed international or translated writing they are unlikely to have already found",
+    "explore an adjacent genre or tradition that shares the DNA of what they love",
+    "feature a couple of bold debut novelists or striking recent discoveries",
+    "lean into an unexpected tonal or stylistic departure that still resonates with their taste",
+    "surface a modern classic or overlooked backlist gem the conversation rarely mentions",
+  ];
+  const shuffled = [...LENSES].sort(() => Math.random() - 0.5);
+  const seed = Math.floor(Math.random() * 1_000_000);
+  const surpriseClause =
+    opts.adventurousness === "safe"
+      ? ""
+      : " At least 2 of the 10 should be genuine, delightful surprises outside the reader's obvious comfort zone (while still plausibly matching their taste).";
+  const discovery = `\n\nDiscovery angle for THIS set (deliberately vary it from any previous set): ${shuffled[0]}; and ${shuffled[1]}.${surpriseClause} Variation seed: ${seed}.`;
+
   const variety =
     "\n\nEnsure variety across the 10: do NOT include more than one book by the same author, and vary sub-genre, era, and tone.";
 
-  const prompt = `A reader has enjoyed these books: ${opts.inputList}.\n\n${opts.recencyText}${profile}${mood}${adventure}${steer}${avoid}${variety}\n\nRecommend exactly 10 different real, published books they have not already mentioned that they would likely enjoy next, matching their taste, best matches first. Only recommend well-known books you are certain really exist.\n\nQuality bar: strongly prefer acclaimed, award-recognized books — winners or shortlisted/finalist titles for major literary prizes (the Booker Prize, International Booker, Pulitzer Prize, National Book Award, National Book Critics Circle Award, Women's Prize for Fiction, Costa/Whitbread, and — for science fiction & fantasy — the Hugo and Nebula Awards; for non-fiction, the Financial Times Business Book of the Year, the Baillie Gifford / Samuel Johnson Prize, and the Pulitzer Prizes for History, Biography, and General Non-fiction; and for sport, the William Hill Sports Book of the Year), books by Nobel Literature laureates, and books featured on major editorial reading lists (New York Times Notable / Best Books of the Year, Financial Times Best Books of the Year, The Economist Books of the Year) — and books that are widely well-rated by readers (roughly a 4+ average on Goodreads). Avoid obscure or poorly reviewed titles.\n\nFor each, write a short recommendation note in the warm, knowledgeable, slightly personal voice of an independent bookseller — in the spirit of Heywood Hill's handwritten shelf notes. Make it characterful and specific (not generic praise), and name one of their own books where it fits naturally.\n\nRespond with ONLY a valid JSON array (no markdown fences, no commentary) of exactly 10 objects, each with keys: "title" (string), "author" (string), "year" (number, best-known original publication year), "why" (string, a bookseller's note in second person "you", max 240 characters), "lists" (array of strings, subset of ["NYT","FT","Economist"] — ONLY lists you are confident actually featured this book; empty array if none or unsure).`;
+  const prompt = `A reader has enjoyed these books: ${opts.inputList}.\n\n${opts.recencyText}${profile}${mood}${adventure}${novelty}${discovery}${steer}${avoid}${variety}\n\nRecommend exactly 10 different real, published books they have not already mentioned that they would likely enjoy next, matching their taste, best matches first. Only recommend well-known books you are certain really exist.\n\nQuality bar: strongly prefer acclaimed, award-recognized books — winners or shortlisted/finalist titles for major literary prizes (the Booker Prize, International Booker, Pulitzer Prize, National Book Award, National Book Critics Circle Award, Women's Prize for Fiction, Costa/Whitbread, and — for science fiction & fantasy — the Hugo and Nebula Awards; for non-fiction, the Financial Times Business Book of the Year, the Baillie Gifford / Samuel Johnson Prize, and the Pulitzer Prizes for History, Biography, and General Non-fiction; and for sport, the William Hill Sports Book of the Year), books by Nobel Literature laureates, and books featured on major editorial reading lists (New York Times Notable / Best Books of the Year, Financial Times Best Books of the Year, The Economist Books of the Year) — and books that are widely well-rated by readers (roughly a 4+ average on Goodreads). Avoid obscure or poorly reviewed titles.\n\nFor each, write a short recommendation note in the warm, knowledgeable, slightly personal voice of an independent bookseller — in the spirit of Heywood Hill's handwritten shelf notes. Make it characterful and specific (not generic praise), and name one of their own books where it fits naturally.\n\nRespond with ONLY a valid JSON array (no markdown fences, no commentary) of exactly 10 objects, each with keys: "title" (string), "author" (string), "year" (number, best-known original publication year), "why" (string, a bookseller's note in second person "you", max 240 characters), "lists" (array of strings, subset of ["NYT","FT","Economist"] — ONLY lists you are confident actually featured this book; empty array if none or unsure).`;
 
   const message = await getClient().messages.create({
     model: ANTHROPIC_MODEL,

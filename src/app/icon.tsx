@@ -5,6 +5,19 @@ import { ImageResponse } from "next/og";
 export const size = { width: 256, height: 256 };
 export const contentType = "image/png";
 
+// Faux-bold (the bundled default font ignores fontWeight): ring the glyph with
+// white shadow copies so the B reads heavy.
+const bold = (r: number) =>
+  [
+    [1, 0], [-1, 0], [0, 1], [0, -1],
+    [1, 1], [1, -1], [-1, 1], [-1, -1],
+  ]
+    .flatMap(([dx, dy]) => [
+      `${dx * r}px ${dy * r}px 0 #fff`,
+      `${dx * r * 0.6}px ${dy * r * 0.6}px 0 #fff`,
+    ])
+    .join(", ");
+
 export default function Icon() {
   return new ImageResponse(
     (
@@ -21,10 +34,11 @@ export default function Icon() {
         <div
           style={{
             display: "flex",
-            fontSize: 188,
-            fontWeight: 800,
+            fontSize: 196,
+            fontWeight: 900,
             color: "#ffffff",
             marginTop: -12,
+            textShadow: bold(5),
           }}
         >
           B

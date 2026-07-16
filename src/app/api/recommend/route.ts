@@ -90,6 +90,50 @@ function surnameKey(name: string): string {
   );
 }
 
+// ── Robust already-have exclusion ────────────────────────────────────────────
+// Catalog-verified titles often differ from what the reader typed ("The
+// Goldfinch: A Novel" vs "The Goldfinch"), so exclusion must compare normalized
+// forms — diacritics/punctuation stripped — and the subtitle-stripped core.
+
+function normTitle(s: string): string {
+  return (s || "")
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9 ]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/** Title with any subtitle (after a colon/dash/bracket) removed, normalized. */
+function coreTitleKey(s: string): string {
+  return normTitle((s || "").split(/\s*[:–—(]\s*/)[0]) || normTitle(s);
+}
+
+/** "Title by Author" → "Title" (splits on the LAST " by ", so titles that
+ *  themselves contain "by" — e.g. "Death by Meeting by Lencioni" — survive). */
+function stripByAuthor(s: string): string {
+  const i = (s || "").toLowerCase().lastIndexOf(" by ");
+  return i > 0 ? s.slice(0, i) : s || "";
+}
+
+/** Build a matcher over every form (normalized + core) of the given titles. */
+function buildExcluder(titles: string[]): (title: string) => boolean {
+  const keys = new Set<string>();
+  for (const t of titles) {
+    if (!t) continue;
+    const n = normTitle(t);
+    const c = coreTitleKey(t);
+    if (n) keys.add(n);
+    if (c) keys.add(c);
+  }
+  return (title: string) => {
+    const n = normTitle(title);
+    const c = coreTitleKey(title);
+    return (!!n && keys.has(n)) || (!!c && keys.has(c));
+  };
+}
+
 // Detect an Anthropic billing / spend-limit / out-of-credit failure so we can
 // show a plain message instead of a generic "try again".
 function isBudgetError(err: unknown): boolean {
@@ -194,11 +238,14 @@ export async function POST(request: Request) {
     .map((b) => (b.author ? `${b.title} by ${b.author}` : b.title))
     .join("; ");
   const { text: recencyText, cutoff } = recencyPrompt(body.recency);
-  const excluded = new Set(
-    [...validBooks.map((b) => b.title), ...(body.exclude || [])].map((t) =>
-      t.toLowerCase()
-    )
-  );
+  // Normalized exclusion over shelf + client excludes + reading-list titles, so
+  // an already-have book can't sneak back in as a catalog title variant, and
+  // reading-list exclusion doesn't depend on the client remembering to send it.
+  const isExcluded = buildExcluder([
+    ...validBooks.map((b) => b.title),
+    ...(body.exclude || []),
+    ...(body.interested || []).map(stripByAuthor),
+  ]);
 
   try {
     let candidates = await generateCandidates({
@@ -230,10 +277,10 @@ export async function POST(request: Request) {
     // confirm editorial-list membership. Also capture the real reader rating.
     const checked = await Promise.all(
       candidates.slice(0, 10).map(async (c): Promise<Scored | null> => {
-        if (excluded.has(c.title.toLowerCase())) return null;
+        if (isExcluded(c.title)) return null;
         const doc = await verifyBook(c.title, c.author, cutoff);
         if (!doc) return null;
-        if (excluded.has(doc.title.toLowerCase())) return null;
+        if (isExcluded(doc.title)) return null;
 
         const lists = await verifyLists(doc.title, doc.author || c.author);
         const coverUrl = doc.coverUrl || (await fetchCover(doc.title, doc.author || c.author));

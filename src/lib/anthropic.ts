@@ -189,7 +189,11 @@ export async function generateCandidates(
   let avoid = "";
   const excludeList = Array.from(new Set(opts.exclude || [])).filter(Boolean);
   if (excludeList.length) {
-    avoid = `\n\nThe reader has already seen or owns these — do NOT recommend any of them again: ${excludeList.join("; ")}.`;
+    // Cap the prompt list at the most recent entries so a long-lived account's
+    // dismissals can't bloat every request — the API route still hard-filters
+    // against the FULL exclude list after verification, so nothing leaks back.
+    const recent = excludeList.slice(-150);
+    avoid = `\n\nThe reader has already seen or owns these — do NOT recommend any of them again: ${recent.join("; ")}.`;
   }
 
   let profile = "";
